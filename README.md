@@ -109,4 +109,13 @@ make performance_test
 
 This will create the temporal_tables_test database, add all necessary tables, run test tests and drop the database.
 
-In the current version `versioning_function.sql` is 2x slower than `versionin_function_simple.sql` but still in the realm of less than 1ms
+To test against the original c extension run:
+
+```sh
+make performance_test_original
+```
+
+This required the original extentions to be installed, but will automatically add it to the database.
+
+In the current version `versioning_function.sql` is 2x slower than `versionin_function_simple.sql` and around 5x slower then the original version, but still execute the updates (the slowest operation) under 1ms on avarage.
+

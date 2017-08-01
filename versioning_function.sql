@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION versioning2()
+CREATE OR REPLACE FUNCTION versioning()
 RETURNS TRIGGER AS $$
 DECLARE
   sys_period text;
