@@ -99,9 +99,9 @@ name  |     state     |                            sys_period
  test1 | updated twice | ["2017-08-01 16:10:08.880571+02","2017-08-01 16:10:17.33659+02")
 
 
-## Performance test
+## Performance tests
 
-For performance test run:
+For performance tests run:
 
 ```sh
 make performance_test
