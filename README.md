@@ -97,3 +97,16 @@ name  |     state     |                            sys_period
  test1 | inserted      | ["2017-08-01 16:09:45.542983+02","2017-08-01 16:09:54.984179+02")
  test1 | updated       | ["2017-08-01 16:09:54.984179+02","2017-08-01 16:10:08.880571+02")
  test1 | updated twice | ["2017-08-01 16:10:08.880571+02","2017-08-01 16:10:17.33659+02")
+
+
+## Performance test
+
+For performance test run:
+
+```sh
+make performance_test
+```
+
+This will create the temporal_tables_test database, add all necessary tables, run test tests and drop the database.
+
+In the current version `versioning_function.sql` is 2x slower than `versionin_function_simple.sql` but still in the realm of less than 1ms
