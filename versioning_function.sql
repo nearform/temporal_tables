@@ -6,6 +6,21 @@ DECLARE
   manipulate jsonb;
   new_period tstzrange;
 BEGIN
+  IF TG_WHEN != 'BEFORE' OR TG_LEVEL != 'ROW' THEN
+    RAISE TRIGGER_PROTOCOL_VIOLATED USING
+    MESSAGE = 'function "versioning" must be fired BEFORE ROW';
+  END IF;
+
+  IF TG_OP != 'INSERT' AND TG_OP != 'UPDATE' AND TG_OP != 'DELETE' THEN
+    RAISE TRIGGER_PROTOCOL_VIOLATED USING
+    MESSAGE = 'function "versioning" must be fired for INSERT or UPDATE or DELETE';
+  END IF;
+
+  IF TG_NARGS != 3 THEN
+    RAISE INVALID_PARAMETER_VALUE USING
+    MESSAGE = 'wrong number of parameters for function "versioning"',
+    HINT = 'expected 3 parameters but got ' || TG_NARGS;
+  END IF;
 
   sys_period := TG_ARGV[0];
   history_table := TG_ARGV[1];
