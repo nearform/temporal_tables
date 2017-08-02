@@ -26,7 +26,16 @@ BEGIN
   history_table := TG_ARGV[1];
 
   IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
-    EXECUTE format('SELECT tstzrange(lower($1.%I), current_timestamp, ''[)'')', sys_period) USING OLD INTO new_period;
+    IF TG_ARGV[2] = 'true' THEN
+      -- mitigate update conflicts
+      EXECUTE format('
+        SELECT CASE WHEN lower($1.%I) < current_timestamp
+        THEN tstzrange(lower($1.%I), current_timestamp, ''[)'')
+        ELSE tstzrange(lower($1.%I), lower($1.%I) + interval ''1 microseconds'', ''[)'')
+        END', sys_period, sys_period, sys_period, sys_period) USING OLD INTO new_period;
+    ELSE
+      EXECUTE format('SELECT tstzrange(lower($1.%I), current_timestamp, ''[)'')', sys_period) USING OLD INTO new_period;
+    END IF;
     manipulate := jsonb_set('{}'::jsonb, ('{' || sys_period || '}')::text[], to_jsonb(new_period));
 
     EXECUTE format('INSERT INTO %I VALUES($1.*)', history_table) USING jsonb_populate_record(OLD, manipulate);

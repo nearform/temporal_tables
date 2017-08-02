@@ -9,10 +9,7 @@ The goal is to be able to use it on AWS RDS and other hosted solution, where usi
 
 The version provided in `versioning_function.sql` is almost a drop-in replacement.
 
-It works exactly the same way, but lacks:
-- support for history tables that contain only a subset of the original table columns
-- checks on input data and correct usage (i.e. the extension version checks that the trigger has been setup correctly)
-- mitigation of update conflicts as describe [here](https://github.com/arkhipov/temporal_tables#update-conflicts-and-time-adjustment)
+It works exactly the same way, but lacks support for history tables that contain only a subset of the original table columns.
 
 The version in `versioning_function_simple.sql` is similar to the previous one, but the code is simpler because it expects the system period column to always be called `sys_period`.
 
@@ -117,5 +114,5 @@ make performance_test_original
 
 This required the original extentions to be installed, but will automatically add it to the database.
 
-In the current version `versioning_function.sql` is 2x slower than `versionin_function_simple.sql` and around 5x slower then the original version, but still execute the updates (the slowest operation) under 1ms on avarage.
+In the current version `versioning_function.sql` is 3.5x slower than `versionin_function_simple.sql` and around 7x slower then the original version, but still execute the updates (the slowest operation) under 1ms on avarage.
 
