@@ -5,4 +5,3 @@ BEFORE INSERT OR UPDATE OR DELETE ON no_system_period
 FOR EACH ROW EXECUTE PROCEDURE versioning(NULL, NULL, NULL);
 INSERT INTO no_system_period DEFAULT VALUES;
 ERROR:  column "null" of relation "no_system_period" does not exist
-CONTEXT:  PL/pgSQL function versioning() line 33 at RAISE

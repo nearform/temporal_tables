@@ -8,4 +8,3 @@ INSERT INTO no_history_system_period DEFAULT VALUES;
 DELETE FROM no_history_system_period;
 ERROR:  history relation "no_history_system_period_history" does not contain system period column "sys_period"
 HINT:  history relation must contain system period column with the same name and data type as the versioned one
-CONTEXT:  PL/pgSQL function versioning() line 56 at RAISE
