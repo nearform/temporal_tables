@@ -1,5 +1,5 @@
 run_test:
-	@echo "\nRunnin Tests\n"
+	@echo "\nRunning Tests\n"
 	@sh test/runTest.sh
 
 performance_test:
