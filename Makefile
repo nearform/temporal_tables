@@ -1,3 +1,7 @@
+run_test:
+	@echo "\nRunnin Tests\n"
+	@sh test/runTest.sh
+
 performance_test:
 	@echo "\nDB Setup\n"
 	@createdb temporal_tables_test
