@@ -37,7 +37,7 @@ BEGIN
 
   IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
     -- check if history table exits
-    IF NOT EXISTS(SELECT * FROM pg_tables WHERE tablename = history_table AND schemaname = TG_TABLE_SCHEMA) THEN
+    IF to_regclass(history_table) IS NULL THEN
       RAISE 'relation "%" does not exist', history_table;
     END IF;
 
