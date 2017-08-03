@@ -30,7 +30,7 @@ BEGIN
 
   -- check if sys_period exists on original table
   IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
-    IF NOT EXISTS(SELECT * FROM pg_attribute WHERE attrelid = TG_TABLE_NAME::regclass AND attname = sys_period) THEN
+    IF NOT EXISTS(SELECT * FROM pg_attribute WHERE attrelid = TG_TABLE_NAME::regclass AND attname = sys_period AND NOT attisdropped) THEN
       RAISE 'column "%" of relation "%" does not exist', sys_period, TG_TABLE_NAME;
     END IF;
   END IF;
@@ -42,7 +42,7 @@ BEGIN
     END IF;
 
     -- check if history table has sys_period
-    IF NOT EXISTS(SELECT * FROM pg_attribute WHERE attrelid = history_table::regclass AND attname = sys_period) THEN
+    IF NOT EXISTS(SELECT * FROM pg_attribute WHERE attrelid = history_table::regclass AND attname = sys_period AND NOT attisdropped) THEN
       RAISE 'history relation "%" does not contain system period column "%"', history_table, sys_period USING
       HINT = 'history relation must contain system period column with the same name and data type as the versioned one';
     END IF;
