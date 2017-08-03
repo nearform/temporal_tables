@@ -8,6 +8,7 @@ DECLARE
   commonColumns text[];
   time_stamp_to_use timestamptz := current_timestamp;
   range_lower timestamptz;
+  transaction_info txid_snapshot;
 BEGIN
   IF TG_WHEN != 'BEFORE' OR TG_LEVEL != 'ROW' THEN
     RAISE TRIGGER_PROTOCOL_VIOLATED USING
@@ -36,6 +37,13 @@ BEGIN
   END IF;
 
   IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
+    -- Ignore rows already modified in this transaction
+    transaction_info := txid_current_snapshot();
+    IF OLD.xmin::text >= (txid_snapshot_xmin(transaction_info) % (2^32)::bigint)::text
+    AND OLD.xmin::text <= (txid_snapshot_xmax(transaction_info) % (2^32)::bigint)::text THEN
+      RETURN NEW;
+    END IF;
+
     -- check if history table exits
     IF to_regclass(history_table) IS NULL THEN
       RAISE 'relation "%" does not exist', history_table;

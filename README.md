@@ -9,7 +9,7 @@ The goal is to be able to use it on AWS RDS and other hosted solution, where usi
 
 The version provided in `versioning_function.sql` is almost a drop-in replacement.
 
-It works exactly the same way, but lacks support for history tables that contain only a subset of the original table columns.
+It works exactly the same way, but lacks some checks on the sys_period column type.
 
 The version in `versioning_function_simple.sql` is similar to the previous one, but the code is simpler because it expects the system period column to always be called `sys_period`.
 
@@ -95,6 +95,16 @@ name  |     state     |                            sys_period
  test1 | updated       | ["2017-08-01 16:09:54.984179+02","2017-08-01 16:10:08.880571+02")
  test1 | updated twice | ["2017-08-01 16:10:08.880571+02","2017-08-01 16:10:17.33659+02")
 
+
+## Test
+
+In order to run tests:
+
+```sh
+make run_test
+```
+
+The test suite will run the queries in test/sql and store the output in test/result, and will then diff the output from test/result with the prerecorded output in test/expected.
 
 ## Performance tests
 
