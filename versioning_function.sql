@@ -10,6 +10,8 @@ DECLARE
   range_lower timestamptz;
   transaction_info txid_snapshot;
   existing_range tstzrange;
+  holder record;
+  holder2 record;
 BEGIN
   IF TG_WHEN != 'BEFORE' OR TG_LEVEL != 'ROW' THEN
     RAISE TRIGGER_PROTOCOL_VIOLATED USING
@@ -31,10 +33,25 @@ BEGIN
   history_table := TG_ARGV[1];
 
   -- check if sys_period exists on original table
-  IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
-    IF NOT EXISTS(SELECT * FROM pg_attribute WHERE attrelid = TG_TABLE_NAME::regclass AND attname = sys_period AND NOT attisdropped) THEN
-      RAISE 'column "%" of relation "%" does not exist', sys_period, TG_TABLE_NAME;
+  SELECT atttypid, attndims INTO holder FROM pg_attribute WHERE attrelid = TG_TABLE_NAME::regclass AND attname = sys_period AND NOT attisdropped;
+  IF NOT FOUND THEN
+    RAISE 'column "%" of relation "%" does not exist', sys_period, TG_TABLE_NAME USING
+    ERRCODE = 'undefined_column';
+  END IF;
+  IF holder.atttypid != to_regtype('tstzrange') THEN
+    IF holder.attndims > 0 THEN
+      RAISE 'system period column "%" of relation "%" is not a range but an array', sys_period, TG_TABLE_NAME USING
+      ERRCODE = 'datatype_mismatch';
     END IF;
+
+    SELECT rngsubtype INTO holder2 FROM pg_range WHERE rngtypid = holder.atttypid;
+    IF FOUND THEN
+      RAISE 'system period column "%" of relation "%" is not a range of timestamp with timezone but of type %', sys_period, TG_TABLE_NAME, format_type(holder2.rngsubtype, null) USING
+      ERRCODE = 'datatype_mismatch';
+    END IF;
+
+    RAISE 'system period column "%" of relation "%" is not a range but type %', sys_period, TG_TABLE_NAME, format_type(holder.atttypid, null) USING
+    ERRCODE = 'datatype_mismatch';
   END IF;
 
   IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
