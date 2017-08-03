@@ -7,7 +7,7 @@ mkdir -p test/result
 
 # TESTS="no_history_table no_system_period no_history_system_period"
 
-TESTS="versioning no_history_table no_history_system_period no_system_period structure combinations"
+TESTS="versioning no_history_table no_history_system_period no_system_period structure combinations invalid_system_period_values"
 
 for name in $TESTS; do
   echo ""

@@ -9,6 +9,7 @@ DECLARE
   time_stamp_to_use timestamptz := current_timestamp;
   range_lower timestamptz;
   transaction_info txid_snapshot;
+  existing_range tstzrange;
 BEGIN
   IF TG_WHEN != 'BEFORE' OR TG_LEVEL != 'ROW' THEN
     RAISE TRIGGER_PROTOCOL_VIOLATED USING
@@ -59,10 +60,22 @@ BEGIN
       HINT = 'history relation must contain system period column with the same name and data type as the versioned one';
     END IF;
 
+    EXECUTE format('SELECT $1.%I', sys_period) USING OLD INTO existing_range;
+
+    IF existing_range IS NULL THEN
+      RAISE 'system period column "%" of relation "%" must not be null', sys_period, TG_TABLE_NAME USING
+      ERRCODE = 'null_value_not_allowed';
+    END IF;
+
+    IF isempty(existing_range) OR NOT upper_inf(existing_range) THEN
+      RAISE 'system period column "%" of relation "%" contains invalid value', sys_period, TG_TABLE_NAME USING
+      ERRCODE = 'data_exception',
+      DETAIL = 'valid ranges must be non-empty and unbounded on the high side';
+    END IF;
+
     IF TG_ARGV[2] = 'true' THEN
       -- mitigate update conflicts
-      EXECUTE format('SELECT lower($1.%I)', sys_period) USING OLD INTO range_lower;
-
+      range_lower := lower(existing_range);
       IF range_lower >= time_stamp_to_use THEN
         time_stamp_to_use := range_lower + interval '1 microseconds';
       END IF;
