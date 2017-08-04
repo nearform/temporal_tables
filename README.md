@@ -3,17 +3,15 @@
 
 This is an attempt to rewrite the postgresql [temporal_tables](https://github.com/arkhipov/temporal_tables) extension without the need for external c extension.
 
-The goal is to be able to use it on AWS RDS and other hosted solution, where using custom extension is not an option.
+The goal is to be able to use it on AWS RDS and other hosted solutions, where using custom extensions or c functions is not an option.
 
 ## current situation
 
-The version provided in `versioning_function.sql` is almost a drop-in replacement.
+The version provided in `versioning_function.sql` is a drop-in replacement.
 
-It works exactly the same way, but lacks some checks on the sys_period column type.
+It works exactly the same way, but lacks the [set_system_time]() function to work with the current time.
 
-The version in `versioning_function_simple.sql` is similar to the previous one, but the code is simpler because it expects the system period column to always be called `sys_period`.
-
-An even simpler version could be built by using a static name for the history table.
+The version in `versioning_function_nochecks.sql` is similar to the previous one, but all validation checks have been removed. This version is 2x faster than the normal one, but more dangerous and prone to errors.
 
 ## Usage
 
@@ -106,6 +104,14 @@ make run_test
 
 The test suite will run the queries in test/sql and store the output in test/result, and will then diff the output from test/result with the prerecorded output in test/expected.
 
+A test suite is also available for the nochecks alternative:
+
+```sh
+make run_test_nochecks
+```
+
+Obviously, this suite won't run the tests about the error reporting.
+
 ## Performance tests
 
 For performance tests run:
@@ -116,7 +122,13 @@ make performance_test
 
 This will create the temporal_tables_test database, add all necessary tables, run test tests and drop the database.
 
-To test against the original c extension run:
+Is it also possible to test against the nochecks version:
+
+```sh
+make performance_test_nochecks
+```
+
+or the original c extension run:
 
 ```sh
 make performance_test_original
@@ -124,5 +136,8 @@ make performance_test_original
 
 This required the original extentions to be installed, but will automatically add it to the database.
 
-In the current version `versioning_function.sql` is 3.5x slower than `versionin_function_simple.sql` and around 7x slower then the original version, but still execute the updates (the slowest operation) under 1ms on avarage.
+On the test machine (my laptop) the complete version is 2x slower than the nochecks versions and 16x slower than the original version.
 
+Two comments about those results:
+- original c version makes some use of caching (i.e to share an execution plan), whilst this version doesn't. This is propably accounting for a good chunk of the performance difference. At the moment there's not plan of implementing such caching in this version.
+- The trigger still executes in under 1ms and in production environments the the network latency should be more relevant than the trigger itself.
