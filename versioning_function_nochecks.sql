@@ -10,6 +10,8 @@ DECLARE
   transaction_info txid_snapshot;
   existing_range tstzrange;
 BEGIN
+  -- version 0.0.1
+
   sys_period := TG_ARGV[0];
   history_table := TG_ARGV[1];
 

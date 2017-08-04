@@ -1,6 +1,8 @@
 
 # Temporal Tables
 
+_Version: 0.0.1_
+
 This is an attempt to rewrite the postgresql [temporal_tables](https://github.com/arkhipov/temporal_tables) extension in PL/pgSQL, without the need for external c extension.
 
 The goal is to be able to use it on AWS RDS and other hosted solutions, where using custom extensions or c functions is not an option.
@@ -149,6 +151,7 @@ Two comments about those results:
 ### Paolo Chiodi
 
 [https://github.com/paolochiodi](https://github.com/paolochiodi)
+
 [https://twitter.com/paolochiodi](https://twitter.com/paolochiodi)
 
 <a name="acknowledgements"></a>
