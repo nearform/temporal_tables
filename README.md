@@ -57,7 +57,7 @@ Finally, create the trigger:
 ```sql
 CREATE TRIGGER versioning_trigger
 BEFORE INSERT OR UPDATE OR DELETE ON subscriptions
-FOR EACH ROW EXECUTE PROCEDURE versioning2(
+FOR EACH ROW EXECUTE PROCEDURE versioning(
   'sys_period', 'subscriptions_history', true
 );
 ```
