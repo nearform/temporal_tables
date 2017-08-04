@@ -1,11 +1,9 @@
 
-# temporal_tables
+# Temporal Tables
 
-This is an attempt to rewrite the postgresql [temporal_tables](https://github.com/arkhipov/temporal_tables) extension without the need for external c extension.
+This is an attempt to rewrite the postgresql [temporal_tables](https://github.com/arkhipov/temporal_tables) extension in PL/pgSQL, without the need for external c extension.
 
 The goal is to be able to use it on AWS RDS and other hosted solutions, where using custom extensions or c functions is not an option.
-
-## current situation
 
 The version provided in `versioning_function.sql` is a drop-in replacement.
 
@@ -13,6 +11,7 @@ It works exactly the same way, but lacks the [set_system_time]() function to wor
 
 The version in `versioning_function_nochecks.sql` is similar to the previous one, but all validation checks have been removed. This version is 2x faster than the normal one, but more dangerous and prone to errors.
 
+<a name="usage"></a>
 ## Usage
 
 Create a database and the versioning function:
@@ -94,6 +93,7 @@ name  |     state     |                            sys_period
  test1 | updated twice | ["2017-08-01 16:10:08.880571+02","2017-08-01 16:10:17.33659+02")
 
 
+<a name="test"></a>
 ## Test
 
 In order to run tests:
@@ -112,6 +112,7 @@ make run_test_nochecks
 
 Obviously, this suite won't run the tests about the error reporting.
 
+<a name="performance_tests"></a>
 ## Performance tests
 
 For performance tests run:
@@ -141,3 +142,20 @@ On the test machine (my laptop) the complete version is 2x slower than the noche
 Two comments about those results:
 - original c version makes some use of caching (i.e to share an execution plan), whilst this version doesn't. This is propably accounting for a good chunk of the performance difference. At the moment there's not plan of implementing such caching in this version.
 - The trigger still executes in under 1ms and in production environments the the network latency should be more relevant than the trigger itself.
+
+<a name="the-team"></a>
+## The team
+
+### Paolo Chiodi
+
+[https://github.com/paolochiodi](https://github.com/paolochiodi)
+[https://twitter.com/paolochiodi](https://twitter.com/paolochiodi)
+
+<a name="acknowledgements"></a>
+## Acknowledgements
+
+This project was kindly sponsored by [nearForm](http://nearform.com).
+
+## License
+
+Licensed under [MIT](./LICENSE).
