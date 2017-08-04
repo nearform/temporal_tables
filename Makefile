@@ -2,6 +2,11 @@ run_test:
 	@echo "\nRunning Tests\n"
 	@sh test/runTest.sh
 
+run_test_nochecks:
+	@echo "\nRunning Tests - No Check\n"
+	@sh test/runTestNochecks.sh
+
+
 performance_test:
 	@echo "\nDB Setup\n"
 	@createdb temporal_tables_test
@@ -23,13 +28,13 @@ performance_test:
 	@psql temporal_tables_test -q -f test/performance/teardown.sql
 	@psql -q -c "drop database temporal_tables_test;"
 
-performance_test_simple:
+performance_test_nochecks:
 	@echo "\nDB Setup\n"
 	@createdb temporal_tables_test
-	@psql temporal_tables_test -q -f versioning_function_simple.sql
+	@psql temporal_tables_test -q -f versioning_function_nochecks.sql
 	@psql temporal_tables_test -q -f test/performance/setup.sql
 
-	@echo "\nRun Test for SIMPLE version\n"
+	@echo "\nRun Test for NOCHECKS version\n"
 
 	@echo "Insert"
 	@psql temporal_tables_test -q -f test/performance/insert.sql
