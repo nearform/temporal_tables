@@ -99,6 +99,36 @@ BEGIN
     END IF;
 
     WITH history AS
+      (SELECT attname, atttypid
+      FROM   pg_attribute
+      WHERE  attrelid = history_table::regclass
+      AND    attnum > 0
+      AND    NOT attisdropped),
+      main AS
+      (SELECT attname, atttypid
+      FROM   pg_attribute
+      WHERE  attrelid = TG_TABLE_NAME::regclass
+      AND    attnum > 0
+      AND    NOT attisdropped)
+    SELECT
+      history.attname AS history_name,
+      main.attname AS main_name,
+      history.atttypid AS history_type,
+      main.atttypid AS main_type
+    INTO holder
+      FROM history
+      INNER JOIN main
+      ON history.attname = main.attname
+    WHERE
+      history.atttypid != main.atttypid;
+
+    IF FOUND THEN
+      RAISE 'column "%" of relation "%" is of type % but column "%" of history relation "%" is of type %',
+        holder.main_name, TG_TABLE_NAME, format_type(holder.main_type, null), holder.history_name, history_table, format_type(holder.history_type, null)
+      USING ERRCODE = 'datatype_mismatch';
+    END IF;
+
+    WITH history AS
       (SELECT attname
       FROM   pg_attribute
       WHERE  attrelid = history_table::regclass

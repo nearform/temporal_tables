@@ -5,9 +5,10 @@ psql temporal_tables_test -q -f versioning_function.sql
 
 mkdir -p test/result
 
-# TESTS="no_history_table no_system_period no_history_system_period"
-
-TESTS="versioning no_history_table no_history_system_period no_system_period structure combinations invalid_system_period_values invalid_system_period"
+TESTS="
+  no_history_table no_history_system_period no_system_period
+  invalid_system_period_values invalid_system_period invalid_types
+  versioning structure combinations"
 
 for name in $TESTS; do
   echo ""
