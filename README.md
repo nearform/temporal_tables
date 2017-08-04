@@ -9,7 +9,7 @@ The goal is to be able to use it on AWS RDS and other hosted solutions, where us
 
 The version provided in `versioning_function.sql` is a drop-in replacement.
 
-It works exactly the same way, but lacks the [set_system_time]() function to work with the current time.
+It works exactly the same way, but lacks the [set_system_time](https://github.com/arkhipov/temporal_tables#advanced-usage) function to work with the current time.
 
 The version in `versioning_function_nochecks.sql` is similar to the previous one, but all validation checks have been removed. This version is 2x faster than the normal one, but more dangerous and prone to errors.
 
