@@ -162,3 +162,5 @@ This project was kindly sponsored by [nearForm](http://nearform.com).
 ## License
 
 Licensed under [MIT](./LICENSE).
+
+The test scenarios in test/sql and test/expected have been copied over from the original temporal_tables extension, whose license is [BSD 2-clause](https://github.com/arkhipov/temporal_tables/blob/master/LICENSE)
