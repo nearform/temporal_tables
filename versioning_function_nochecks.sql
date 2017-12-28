@@ -46,7 +46,7 @@ BEGIN
       main AS
       (SELECT attname
       FROM   pg_attribute
-      WHERE  attrelid = TG_TABLE_NAME::regclass
+      WHERE  attrelid = TG_RELID
       AND    attnum > 0
       AND    NOT attisdropped)
     SELECT array_agg(quote_ident(history.attname)) INTO commonColumns
@@ -56,7 +56,12 @@ BEGIN
       AND history.attname != sys_period;
 
     EXECUTE ('INSERT INTO ' ||
-      quote_ident(history_table) ||
+      CASE split_part(history_table, '.', 2)
+      WHEN '' THEN
+        quote_ident(history_table)
+      ELSE
+        quote_ident(split_part(history_table, '.', 1)) || '.' || quote_ident(split_part(history_table, '.', 2))
+      END ||
       '(' ||
       array_to_string(commonColumns , ',') ||
       ',' ||
