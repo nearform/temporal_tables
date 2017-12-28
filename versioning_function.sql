@@ -68,7 +68,7 @@ BEGIN
     END IF;
 
     -- check if history table exits
-    IF to_regclass(history_table::cstring) IS NULL THEN
+    IF to_regclass(history_table) IS NULL THEN
       RAISE 'relation "%" does not exist', history_table;
     END IF;
 
