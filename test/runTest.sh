@@ -8,7 +8,7 @@ mkdir -p test/result
 TESTS="
   no_history_table no_history_system_period no_system_period
   invalid_system_period_values invalid_system_period invalid_types
-  versioning structure combinations"
+  versioning structure combinations different_schema"
 
 for name in $TESTS; do
   echo ""
