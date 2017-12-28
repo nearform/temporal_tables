@@ -1,7 +1,7 @@
 
 # Temporal Tables
 
-_Version: 0.0.1_
+_Version: 0.1.0_
 
 This is an attempt to rewrite the postgresql [temporal_tables](https://github.com/arkhipov/temporal_tables) extension in PL/pgSQL, without the need for external c extension.
 
