@@ -11,6 +11,7 @@ DECLARE
   existing_range tstzrange;
   holder record;
   holder2 record;
+  pg_version integer;
 BEGIN
   -- version 0.0.1
 
@@ -67,9 +68,19 @@ BEGIN
       RETURN NEW;
     END IF;
 
-    -- check if history table exits
-    IF to_regclass(history_table::cstring) IS NULL THEN
-      RAISE 'relation "%" does not exist', history_table;
+    SELECT current_setting('server_version_num')::integer
+    INTO pg_version;
+
+    -- to support postgres < 9.6
+    IF pg_version < 90600 THEN
+      -- check if history table exits
+      IF to_regclass(history_table::cstring) IS NULL THEN
+        RAISE 'relation "%" does not exist', history_table;
+      END IF;
+    ELSE
+      IF to_regclass(history_table) IS NULL THEN
+        RAISE 'relation "%" does not exist', history_table;
+      END IF;
     END IF;
 
     -- check if history table has sys_period
