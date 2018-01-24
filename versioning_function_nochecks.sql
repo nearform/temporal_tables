@@ -72,10 +72,23 @@ BEGIN
        USING OLD, range_lower, time_stamp_to_use;
   END IF;
 
-  IF TG_OP = 'UPDATE' OR TG_OP = 'INSERT' THEN
+  -- For updates, automatically update the sys_period 
+  IF TG_OP = 'UPDATE' THEN
     manipulate := jsonb_set('{}'::jsonb, ('{' || sys_period || '}')::text[], to_jsonb(tstzrange(time_stamp_to_use, null, '[)')));
 
     RETURN jsonb_populate_record(NEW, manipulate);
+  END IF;
+
+  -- For inserts, allow a custom sys_period if it is valid. A valid sys_period is one that is not NULL,
+  -- starts in the past, and ends in NULL. If invalid, provide one by default.
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.sys_period IS NOT NULL AND lower(NEW.sys_period) <= time_stamp_to_use AND upper(NEW.sys_period) IS NULL THEN
+      RETURN NEW;
+    ELSE
+      manipulate := jsonb_set('{}'::jsonb, ('{' || sys_period || '}')::text[], to_jsonb(tstzrange(time_stamp_to_use, null, '[)')));
+
+      RETURN jsonb_populate_record(NEW, manipulate);
+    END IF;
   END IF;
 
   RETURN OLD;
