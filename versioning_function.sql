@@ -11,8 +11,9 @@ DECLARE
   existing_range tstzrange;
   holder record;
   holder2 record;
+  pg_version integer;
 BEGIN
-  -- version 0.0.1
+  -- version 0.2.0
 
   IF TG_WHEN != 'BEFORE' OR TG_LEVEL != 'ROW' THEN
     RAISE TRIGGER_PROTOCOL_VIOLATED USING
@@ -34,7 +35,7 @@ BEGIN
   history_table := TG_ARGV[1];
 
   -- check if sys_period exists on original table
-  SELECT atttypid, attndims INTO holder FROM pg_attribute WHERE attrelid = TG_TABLE_NAME::regclass AND attname = sys_period AND NOT attisdropped;
+  SELECT atttypid, attndims INTO holder FROM pg_attribute WHERE attrelid = TG_RELID AND attname = sys_period AND NOT attisdropped;
   IF NOT FOUND THEN
     RAISE 'column "%" of relation "%" does not exist', sys_period, TG_TABLE_NAME USING
     ERRCODE = 'undefined_column';
@@ -67,9 +68,19 @@ BEGIN
       RETURN NEW;
     END IF;
 
-    -- check if history table exits
-    IF to_regclass(history_table) IS NULL THEN
-      RAISE 'relation "%" does not exist', history_table;
+    SELECT current_setting('server_version_num')::integer
+    INTO pg_version;
+
+    -- to support postgres < 9.6
+    IF pg_version < 90600 THEN
+      -- check if history table exits
+      IF to_regclass(history_table::cstring) IS NULL THEN
+        RAISE 'relation "%" does not exist', history_table;
+      END IF;
+    ELSE
+      IF to_regclass(history_table) IS NULL THEN
+        RAISE 'relation "%" does not exist', history_table;
+      END IF;
     END IF;
 
     -- check if history table has sys_period
@@ -108,7 +119,7 @@ BEGIN
       main AS
       (SELECT attname, atttypid
       FROM   pg_attribute
-      WHERE  attrelid = TG_TABLE_NAME::regclass
+      WHERE  attrelid = TG_RELID
       AND    attnum > 0
       AND    NOT attisdropped)
     SELECT
@@ -138,7 +149,7 @@ BEGIN
       main AS
       (SELECT attname
       FROM   pg_attribute
-      WHERE  attrelid = TG_TABLE_NAME::regclass
+      WHERE  attrelid = TG_RELID
       AND    attnum > 0
       AND    NOT attisdropped)
     SELECT array_agg(quote_ident(history.attname)) INTO commonColumns
@@ -148,7 +159,12 @@ BEGIN
       AND history.attname != sys_period;
 
     EXECUTE ('INSERT INTO ' ||
-      quote_ident(history_table) ||
+      CASE split_part(history_table, '.', 2)
+      WHEN '' THEN
+        quote_ident(history_table)
+      ELSE
+        quote_ident(split_part(history_table, '.', 1)) || '.' || quote_ident(split_part(history_table, '.', 2))
+      END ||
       '(' ||
       array_to_string(commonColumns , ',') ||
       ',' ||
