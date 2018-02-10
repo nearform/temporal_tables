@@ -13,7 +13,7 @@ DECLARE
   holder2 record;
   pg_version integer;
 BEGIN
-  -- version 0.0.1
+  -- version 0.2.0
 
   IF TG_WHEN != 'BEFORE' OR TG_LEVEL != 'ROW' THEN
     RAISE TRIGGER_PROTOCOL_VIOLATED USING
