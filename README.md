@@ -94,6 +94,26 @@ name  |     state     |                            sys_period
  test1 | updated       | ["2017-08-01 16:09:54.984179+02","2017-08-01 16:10:08.880571+02")
  test1 | updated twice | ["2017-08-01 16:10:08.880571+02","2017-08-01 16:10:17.33659+02")
 
+<a name="migrations"></a>
+## Migrations
+
+During the life of an application is may be necessary to change the schema of a table. In order for temporal_tables to continue to work properly the same migrations should be applied to the history table as well.
+
+### What happens if a column is added to the original table but not to the history table?
+
+The new column will be ignore, meaning that the updated row is transferred to the history table, but without the value of the new column. This means that you will lose that specific data.
+
+There are valid use case for this, in example when you are not interested in storing the historic values of that column.
+
+**Beware that temporal_tables won't raise an error**
+
+### What should I do if I need to remove a column from the original table but want to keep the historic values for it?
+
+You remove the column in the original table, but keep it in the history table - provided it accepts null values.
+
+From that point on the old column in the history table will be ignored and will get null values.
+
+If the column doesn't accept null values you'll need to modify it to allow for null values, otherwise temporal_tables won't be able to create new rows and all operations on the original table will fail
 
 <a name="test"></a>
 ## Test
