@@ -45,7 +45,7 @@ workflows:
   version: 2
   tests:
     jobs:
-      -build
+      - build
       - run-test-nine:
           requires:
             - build
@@ -57,4 +57,4 @@ workflows:
             - build
       - run-test-nochecks-ten:
           requires:
-           - build
+            - build
