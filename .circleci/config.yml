@@ -1,19 +1,43 @@
-defaults: &defaults
+defaults: &pg_nine
   working_directory: ~/workspace
   docker:
-    - image: circleci/postgres:9.6.2-alpine
+    - image: circleci/postgres:9.5-alpine
       environment:
       - POSTGRES_USER: root
+      - POSTGRES_DB: db
+
+defaults: &pg_ten
+  working_directory: ~/workspace
+  docker:
+    - image: circleci/postgres:10-alpine
+      environment:
+      - POSTGRES_USER: root
+      - POSTGRES_DB: db
 
 version: 2
 jobs:
-  run-test:
-    <<: *defaults
+  build:
+    <<: *pg_nine
+    steps:
+      - checkout
+
+  run-test-nine:
+    <<: *pg_nine
     steps:
       - run: make run_test
 
-  run-test-nochecks:
-    <<: *defaults
+  run-test-nochecks-nine:
+    <<: *pg_nine
+    steps:
+      - run: make run_test_nochecks
+
+  run-test-ten:
+      <<: *pg_ten
+      steps:
+        - run: make run_test
+
+  run-test-nochecks-ten:
+    <<: *pg_ten
     steps:
       - run: make run_test_nochecks
 
@@ -21,5 +45,16 @@ workflows:
   version: 2
   tests:
     jobs:
-      - run-test
-      - run-test-nochecks
+      -build
+      - run-test-nine:
+          requires:
+            - build
+      - run-test-nochecks-nine:
+          requires:
+           - build
+      - run-test-ten:
+          requires:
+            - build
+      - run-test-nochecks-ten:
+          requires:
+           - build
