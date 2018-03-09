@@ -1,0 +1,25 @@
+defaults: &defaults
+  working_directory: ~/workspace
+  docker:
+    - image: circleci/postgres:9.6.2-alpine
+      environment:
+      - POSTGRES_USER: root
+
+version: 2
+jobs:
+  run-test:
+    <<: *defaults
+    steps:
+      - run: make run_test
+
+  run-test-nochecks:
+    <<: *defaults
+    steps:
+      - run: make run_test_nochecks
+
+workflows:
+  version: 2
+  tests:
+    jobs:
+      - run-test
+      - run-test-nochecks
