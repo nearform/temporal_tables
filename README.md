@@ -181,6 +181,7 @@ This project was kindly sponsored by [nearForm](http://nearform.com).
 
 ## License
 
-Licensed under [MIT](./LICENSE).
+Copyright nearForm 2018. Licensed under 
+[Apache 2.0](<https://tldrlegal.com/license/apache-license-2.0-(apache-2.0)>)
 
 The test scenarios in test/sql and test/expected have been copied over from the original temporal_tables extension, whose license is [BSD 2-clause](https://github.com/arkhipov/temporal_tables/blob/master/LICENSE)
