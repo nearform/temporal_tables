@@ -46,21 +46,21 @@ jobs:
     steps:
       - attach_workspace:
           at: ~/
-      - run: make run_test_nochecks
+      - run: sh test/runTestNochecks.sh
 
   run-test-ten:
     <<: *pg_ten
     steps:
       - attach_workspace:
           at: ~/
-      - run: make run_test
+      - run: sh test/runTest.sh
 
   run-test-nochecks-ten:
     <<: *pg_ten
     steps:
       - attach_workspace:
           at: ~/
-      - run: make run_test_nochecks
+      - run: sh test/runTestNochecks.sh
 
 workflows:
   version: 2
