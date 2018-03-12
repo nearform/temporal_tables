@@ -18,7 +18,12 @@ defaults: &pg_ten
 
 version: 2
 jobs:
-  build:
+  build-nine:
+    <<: *pg_nine
+    steps:
+      - checkout
+
+  build-ten:
     <<: *pg_nine
     steps:
       - checkout
@@ -47,16 +52,17 @@ workflows:
   version: 2
   tests:
     jobs:
-      - build
+      - build-nine
+      - build-ten
       - run-test-nine:
           requires:
-            - build
+            - build-nine
       - run-test-nochecks-nine:
           requires:
-           - build
+            - build-nine
       - run-test-ten:
           requires:
-            - build
+            - build-ten
       - run-test-nochecks-ten:
           requires:
-            - build
+            - build-ten
