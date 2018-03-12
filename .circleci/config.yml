@@ -20,7 +20,6 @@ jobs:
     <<: *pg_nine
     steps:
       - checkout
-      - run: sudo apt-get install build-essential
       - persist_to_workspace:
           root: ~/
           paths:
@@ -30,7 +29,6 @@ jobs:
     <<: *pg_ten
     steps:
       - checkout
-      - run: sudo apt-get install build-essential
       - persist_to_workspace:
           root: ~/
           paths:
@@ -41,7 +39,7 @@ jobs:
     steps:
       - attach_workspace:
           at: ~/
-      - run: make run_test
+      - run: sh test/runTest.sh
 
   run-test-nochecks-nine:
     <<: *pg_nine
