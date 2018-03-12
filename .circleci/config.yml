@@ -39,21 +39,29 @@ jobs:
   run-test-nine:
     <<: *pg_nine
     steps:
+      - attach_workspace:
+          at: ~/
       - run: make run_test
 
   run-test-nochecks-nine:
     <<: *pg_nine
     steps:
+      - attach_workspace:
+          at: ~/
       - run: make run_test_nochecks
 
   run-test-ten:
-      <<: *pg_ten
-      steps:
-        - run: make run_test
+    <<: *pg_ten
+    steps:
+      - attach_workspace:
+          at: ~/
+      - run: make run_test
 
   run-test-nochecks-ten:
     <<: *pg_ten
     steps:
+      - attach_workspace:
+          at: ~/
       - run: make run_test_nochecks
 
 workflows:
