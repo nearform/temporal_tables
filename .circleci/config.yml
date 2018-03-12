@@ -16,67 +16,35 @@ defaults: &pg_ten
 
 version: 2
 jobs:
-  build-nine:
-    <<: *pg_nine
-    steps:
-      - checkout
-      - persist_to_workspace:
-          root: ~/
-          paths:
-            - workspace
-
-  build-ten:
-    <<: *pg_ten
-    steps:
-      - checkout
-      - persist_to_workspace:
-          root: ~/
-          paths:
-            - workspace
-
   run-test-nine:
     <<: *pg_nine
     steps:
-      - attach_workspace:
-          at: ~/
+      - checkout
       - run: sh test/runTest.sh
 
   run-test-nochecks-nine:
     <<: *pg_nine
     steps:
-      - attach_workspace:
-          at: ~/
+      - checkout
       - run: sh test/runTestNochecks.sh
 
   run-test-ten:
     <<: *pg_ten
     steps:
-      - attach_workspace:
-          at: ~/
+      - checkout
       - run: sh test/runTest.sh
 
   run-test-nochecks-ten:
     <<: *pg_ten
     steps:
-      - attach_workspace:
-          at: ~/
+      - checkout
       - run: sh test/runTestNochecks.sh
 
 workflows:
   version: 2
   tests:
     jobs:
-      - build-nine
-      - build-ten
-      - run-test-nine:
-          requires:
-            - build-nine
-      - run-test-nochecks-nine:
-          requires:
-            - build-nine
-      - run-test-ten:
-          requires:
-            - build-ten
-      - run-test-nochecks-ten:
-          requires:
-            - build-ten
+      - run-test-nine
+      - run-test-nochecks-nine
+      - run-test-ten
+      - run-test-nochecks-ten
