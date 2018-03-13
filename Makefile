@@ -6,6 +6,10 @@ run_test_nochecks:
 	@echo "\nRunning Tests - No Check\n"
 	@sh test/runTestNochecks.sh
 
+run_test_build:
+	@echo "\nRunning Tests - Build function\n"
+	@sh test/runTestBuildVersioningFunction.sh
+
 
 performance_test:
 	@echo "\nDB Setup\n"

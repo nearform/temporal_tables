@@ -10,12 +10,12 @@ BEGIN
   -- version 0.0.1
 
   -- check if original table exits
-  IF to_regclass(original_table) IS NULL THEN
+  IF to_regclass(original_table::cstring) IS NULL THEN
     RAISE 'relation "%" does not exist', original_table;
   END IF;
 
   -- check if history table exits
-  IF to_regclass(history_table) IS NULL THEN
+  IF to_regclass(history_table::cstring) IS NULL THEN
     RAISE 'relation "%" does not exist', history_table;
   END IF;
 
