@@ -1,5 +1,4 @@
 defaults: &pg_nine
-  working_directory: ~/workspace
   docker:
     - image: circleci/postgres:latest
       environment:
@@ -7,7 +6,6 @@ defaults: &pg_nine
       - POSTGRES_DB: temporal_tables_test
 
 defaults: &pg_ten
-  working_directory: ~/workspace
   docker:
     - image: circleci/postgres:10-alpine
       environment:
