@@ -1,7 +1,7 @@
 defaults: &pg_nine
   working_directory: ~/workspace
   docker:
-    - image: circleci/postgres:9.5-alpine
+    - image: circleci/postgres:latest
       environment:
       - POSTGRES_USER: postgres
       - POSTGRES_DB: temporal_tables_test
