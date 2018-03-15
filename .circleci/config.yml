@@ -1,6 +1,6 @@
 defaults: &pg_nine
   docker:
-    - image: circleci/postgres:latest
+    - image: circleci/postgres:9.5-alpine
       environment:
       - POSTGRES_USER: postgres
       - POSTGRES_DB: temporal_tables_test
