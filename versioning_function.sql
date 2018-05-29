@@ -4,6 +4,7 @@ DECLARE
   sys_period text;
   history_table text;
   manipulate jsonb;
+	ignore_unchanged_values bool;
   commonColumns text[];
   time_stamp_to_use timestamptz := current_timestamp;
   range_lower timestamptz;
@@ -13,7 +14,7 @@ DECLARE
   holder2 record;
   pg_version integer;
 BEGIN
-  -- version 0.2.0
+  -- version 0.2.1
 
   IF TG_WHEN != 'BEFORE' OR TG_LEVEL != 'ROW' THEN
     RAISE TRIGGER_PROTOCOL_VIOLATED USING
@@ -25,14 +26,19 @@ BEGIN
     MESSAGE = 'function "versioning" must be fired for INSERT or UPDATE or DELETE';
   END IF;
 
-  IF TG_NARGS != 3 THEN
+  IF TG_NARGS not in (3,4) THEN
     RAISE INVALID_PARAMETER_VALUE USING
     MESSAGE = 'wrong number of parameters for function "versioning"',
-    HINT = 'expected 3 parameters but got ' || TG_NARGS;
+    HINT = 'expected 3 or 4 parameters but got ' || TG_NARGS;
   END IF;
 
   sys_period := TG_ARGV[0];
   history_table := TG_ARGV[1];
+  ignore_unchanged_values := TG_ARGV[3];
+  
+	IF ignore_unchanged_values AND TG_OP = 'UPDATE' AND NEW IS NOT DISTINCT FROM OLD THEN
+		RETURN OLD;
+	END IF;
 
   -- check if sys_period exists on original table
   SELECT atttypid, attndims INTO holder FROM pg_attribute WHERE attrelid = TG_RELID AND attname = sys_period AND NOT attisdropped;
