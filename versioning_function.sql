@@ -102,9 +102,18 @@ BEGIN
       DETAIL = 'valid ranges must be non-empty and unbounded on the high side';
     END IF;
 
+    range_lower := lower(existing_range);
+
+    IF TG_OP = 'UPDATE' THEN
+      -- On UPDATE we always have a NEW.sys_period, which equals OLD.sys_period [range_lower] if not explicitly set
+      IF NEW.sys_period IS NOT NULL AND lower(NEW.sys_period) > range_lower THEN
+        -- If given a sys_period, use it's lower bound instead of current_timestamp
+        time_stamp_to_use := lower(NEW.sys_period);
+      END IF;
+    END IF;
+
     IF TG_ARGV[2] = 'true' THEN
       -- mitigate update conflicts
-      range_lower := lower(existing_range);
       IF range_lower >= time_stamp_to_use THEN
         time_stamp_to_use := range_lower + interval '1 microseconds';
       END IF;
@@ -173,6 +182,13 @@ BEGIN
       array_to_string(commonColumns, ',$1.') ||
       ',tstzrange($2, $3, ''[)''))')
        USING OLD, range_lower, time_stamp_to_use;
+  END IF;
+
+  IF TG_OP = 'INSERT' THEN
+    -- On INSERT we have a NEW.sys_period if explicitly given (or by default value for column)
+    IF NEW.sys_period IS NOT NULL THEN
+      time_stamp_to_use := lower(NEW.sys_period);
+    END IF;
   END IF;
 
   IF TG_OP = 'UPDATE' OR TG_OP = 'INSERT' THEN
