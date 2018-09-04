@@ -3,6 +3,7 @@ RETURNS TRIGGER AS $$
 DECLARE
   sys_period text;
   history_table text;
+  qualified_table_with_schema text;
   manipulate jsonb;
   commonColumns text[];
   time_stamp_to_use timestamptz := current_timestamp;
@@ -14,6 +15,7 @@ BEGIN
 
   sys_period := TG_ARGV[0];
   history_table := TG_ARGV[1];
+  qualified_table_with_schema :=  TG_TABLE_SCHEMA || '.' || history_table;
 
   IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
     -- Ignore rows already modified in this transaction
@@ -40,7 +42,7 @@ BEGIN
     WITH history AS
       (SELECT attname
       FROM   pg_attribute
-      WHERE  attrelid = history_table::regclass
+      WHERE  attrelid = qualified_table_with_schema::regclass
       AND    attnum > 0
       AND    NOT attisdropped),
       main AS
@@ -56,11 +58,11 @@ BEGIN
       AND history.attname != sys_period;
 
     EXECUTE ('INSERT INTO ' ||
-      CASE split_part(history_table, '.', 2)
+      CASE split_part(qualified_table_with_schema, '.', 2)
       WHEN '' THEN
-        quote_ident(history_table)
+        quote_ident(qualified_table_with_schema)
       ELSE
-        quote_ident(split_part(history_table, '.', 1)) || '.' || quote_ident(split_part(history_table, '.', 2))
+        quote_ident(split_part(qualified_table_with_schema, '.', 1)) || '.' || quote_ident(split_part(qualified_table_with_schema, '.', 2))
       END ||
       '(' ||
       array_to_string(commonColumns , ',') ||

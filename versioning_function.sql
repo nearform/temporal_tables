@@ -1,8 +1,11 @@
 CREATE OR REPLACE FUNCTION versioning()
-RETURNS TRIGGER AS $$
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
 DECLARE
   sys_period text;
   history_table text;
+  qualified_table_with_schema text;
   manipulate jsonb;
   commonColumns text[];
   time_stamp_to_use timestamptz := current_timestamp;
@@ -33,6 +36,7 @@ BEGIN
 
   sys_period := TG_ARGV[0];
   history_table := TG_ARGV[1];
+  qualified_table_with_schema :=  TG_TABLE_SCHEMA || '.' || history_table;
 
   -- check if sys_period exists on original table
   SELECT atttypid, attndims INTO holder FROM pg_attribute WHERE attrelid = TG_RELID AND attname = sys_period AND NOT attisdropped;
@@ -70,21 +74,21 @@ BEGIN
 
     SELECT current_setting('server_version_num')::integer
     INTO pg_version;
-
+	
     -- to support postgres < 9.6
     IF pg_version < 90600 THEN
       -- check if history table exits
-      IF to_regclass(history_table::cstring) IS NULL THEN
-        RAISE 'relation "%" does not exist', history_table;
+      IF to_regclass(qualified_table_with_schema::cstring) IS NULL THEN
+        RAISE 'relation "%" does not exist', qualified_table_with_schema;
       END IF;
     ELSE
-      IF to_regclass(history_table) IS NULL THEN
-        RAISE 'relation "%" does not exist', history_table;
+      IF to_regclass(qualified_table_with_schema) IS NULL THEN
+        RAISE '9.6 relation "%" does not exist', qualified_table_with_schema;
       END IF;
     END IF;
 
     -- check if history table has sys_period
-    IF NOT EXISTS(SELECT * FROM pg_attribute WHERE attrelid = history_table::regclass AND attname = sys_period AND NOT attisdropped) THEN
+    IF NOT EXISTS(SELECT * FROM pg_attribute WHERE attrelid = qualified_table_with_schema::regclass AND attname = sys_period AND NOT attisdropped) THEN
       RAISE 'history relation "%" does not contain system period column "%"', history_table, sys_period USING
       HINT = 'history relation must contain system period column with the same name and data type as the versioned one';
     END IF;
@@ -113,7 +117,7 @@ BEGIN
     WITH history AS
       (SELECT attname, atttypid
       FROM   pg_attribute
-      WHERE  attrelid = history_table::regclass
+      WHERE  attrelid = qualified_table_with_schema::regclass
       AND    attnum > 0
       AND    NOT attisdropped),
       main AS
@@ -143,7 +147,7 @@ BEGIN
     WITH history AS
       (SELECT attname
       FROM   pg_attribute
-      WHERE  attrelid = history_table::regclass
+      WHERE  attrelid = qualified_table_with_schema::regclass
       AND    attnum > 0
       AND    NOT attisdropped),
       main AS
@@ -159,11 +163,11 @@ BEGIN
       AND history.attname != sys_period;
 
     EXECUTE ('INSERT INTO ' ||
-      CASE split_part(history_table, '.', 2)
+      CASE split_part(qualified_table_with_schema, '.', 2)
       WHEN '' THEN
-        quote_ident(history_table)
+        quote_ident(qualified_table_with_schema)
       ELSE
-        quote_ident(split_part(history_table, '.', 1)) || '.' || quote_ident(split_part(history_table, '.', 2))
+        quote_ident(split_part(qualified_table_with_schema, '.', 1)) || '.' || quote_ident(split_part(qualified_table_with_schema, '.', 2))
       END ||
       '(' ||
       array_to_string(commonColumns , ',') ||
@@ -183,4 +187,4 @@ BEGIN
 
   RETURN OLD;
 END;
-$$ LANGUAGE plpgsql;
+$function$
