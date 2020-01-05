@@ -10,7 +10,7 @@ DECLARE
   transaction_info txid_snapshot;
   existing_range tstzrange;
 BEGIN
-  -- version 0.0.1
+  -- version 0.3.0
 
   sys_period := TG_ARGV[0];
   history_table := TG_ARGV[1];
@@ -56,12 +56,7 @@ BEGIN
       AND history.attname != sys_period;
 
     EXECUTE ('INSERT INTO ' ||
-      CASE split_part(history_table, '.', 2)
-      WHEN '' THEN
-        quote_ident(history_table)
-      ELSE
-        quote_ident(split_part(history_table, '.', 1)) || '.' || quote_ident(split_part(history_table, '.', 2))
-      END ||
+      history_table ||
       '(' ||
       array_to_string(commonColumns , ',') ||
       ',' ||

@@ -13,7 +13,7 @@ DECLARE
   holder2 record;
   pg_version integer;
 BEGIN
-  -- version 0.2.0
+  -- version 0.3.0
 
   IF TG_WHEN != 'BEFORE' OR TG_LEVEL != 'ROW' THEN
     RAISE TRIGGER_PROTOCOL_VIOLATED USING
@@ -159,12 +159,7 @@ BEGIN
       AND history.attname != sys_period;
 
     EXECUTE ('INSERT INTO ' ||
-      CASE split_part(history_table, '.', 2)
-      WHEN '' THEN
-        quote_ident(history_table)
-      ELSE
-        quote_ident(split_part(history_table, '.', 1)) || '.' || quote_ident(split_part(history_table, '.', 2))
-      END ||
+      history_table ||
       '(' ||
       array_to_string(commonColumns , ',') ||
       ',' ||
