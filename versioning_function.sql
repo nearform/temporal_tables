@@ -71,18 +71,6 @@ BEGIN
     SELECT current_setting('server_version_num')::integer
     INTO pg_version;
 
-    -- to support postgres < 9.6
-    IF pg_version < 90600 THEN
-      -- check if history table exits
-      IF to_regclass(history_table::cstring) IS NULL THEN
-        RAISE 'relation "%" does not exist', history_table;
-      END IF;
-    ELSE
-      IF to_regclass(history_table) IS NULL THEN
-        RAISE 'relation "%" does not exist', history_table;
-      END IF;
-    END IF;
-
     -- check if history table has sys_period
     IF NOT EXISTS(SELECT * FROM pg_attribute WHERE attrelid = history_table::regclass AND attname = sys_period AND NOT attisdropped) THEN
       RAISE 'history relation "%" does not contain system period column "%"', history_table, sys_period USING
