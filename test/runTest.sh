@@ -25,9 +25,9 @@ for name in $TESTS; do
 done
 
 
-psql -q -c "drop database temporal_tables_test;"
+psql -h 127.0.0.1 -p 5432 -U postgres -q -c "drop database temporal_tables_test;"
 
-echo $error
+echo $error "errors"
 if [ "$error" -eq 1 ]; then
   exit 1
 fi
