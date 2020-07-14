@@ -1,7 +1,7 @@
 #!/bin/bash
 
-createdb -h 127.0.0.1 -p 5432 -U postgres temporal_tables_test
-psql -h 127.0.0.1 -p 5432 -U postgres temporal_tables_test -q -f versioning_function.sql
+createdb temporal_tables_test
+psql temporal_tables_test -q -f versioning_function.sql
 
 mkdir -p test/result
 
@@ -16,7 +16,7 @@ for name in $TESTS; do
   echo ""
   echo $name
   echo ""
-  psql -h 127.0.0.1 -p 5432 -U postgres temporal_tables_test -X -a -q --set=SHOW_CONTEXT=never < test/sql/$name.sql > test/result/$name.out 2>&1
+  psql temporal_tables_test -X -a -q --set=SHOW_CONTEXT=never < test/sql/$name.sql > test/result/$name.out 2>&1
   difference="$(diff -b test/expected/$name.out test/result/$name.out)"
   echo $difference
   if [ ! -z "$difference" ]; then
@@ -25,7 +25,7 @@ for name in $TESTS; do
 done
 
 
-psql -h 127.0.0.1 -p 5432 -U postgres -q -c "drop database temporal_tables_test;"
+psql -q -c "drop database temporal_tables_test;"
 
 echo $error "errors"
 if [ "$error" -eq 1 ]; then

@@ -1,50 +1,43 @@
-defaults: &pg_nine
-  docker:
-    - image: circleci/node:latest
-    - image: circleci/postgres:9.5-alpine
-      environment:
-      - POSTGRES_USER: postgres
-      - POSTGRES_DB: temporal_tables_test
-
-defaults: &pg_ten
-  docker:
-    - image: circleci/node:latest
-    - image: circleci/postgres:10-alpine
-      environment:
-      - POSTGRES_USER: postgres
-      - POSTGRES_DB: temporal_tables_test
-
-version: 2
+version: 2.1
+executors:
+  pg95:
+    docker:
+      - image: circleci/node:latest
+      - image: circleci/postgres:9.5-alpine
+        environment:
+        - POSTGRES_USER: postgres
+        - POSTGRES_PASSWORD: postgres
+        - PGHOST: 127.0.0.1
+        - PGPORT: 5432
+        - PGUSER: postgres
+        - PGPASSWORD: postgres
+  pg10:
+    docker:
+      - image: circleci/node:latest
+      - image: circleci/postgres:10-alpine
+        environment:
+        - POSTGRES_USER: postgres
+        - POSTGRES_PASSWORD: postgres
+        - PGHOST: 127.0.0.1
+        - PGPORT: 5432
+        - PGUSER: postgres
+        - PGPASSWORD: postgres
 jobs:
-  run-test-nine:
-    <<: *pg_nine
+  run-test:
+    parameters:
+      version:
+        type: executor
+    executor: << parameters.version >>
     steps:
       - checkout
       - run: sh test/runTest.sh
-
-  run-test-nochecks-nine:
-    <<: *pg_nine
-    steps:
-      - checkout
-      - run: sh test/runTestNochecks.sh
-
-  run-test-ten:
-    <<: *pg_ten
-    steps:
-      - checkout
-      - run: sh test/runTest.sh
-
-  run-test-nochecks-ten:
-    <<: *pg_ten
-    steps:
-      - checkout
       - run: sh test/runTestNochecks.sh
 
 workflows:
   version: 2
   tests:
     jobs:
-      - run-test-nine
-      - run-test-nochecks-nine
-      - run-test-ten
-      - run-test-nochecks-ten
+      - run-test:
+          matrix:
+          parameters:
+            version: [pg95, pg10]
