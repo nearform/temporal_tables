@@ -4,7 +4,7 @@ DECLARE
   sys_period text;
   history_table text;
   manipulate jsonb;
-	ignore_unchanged_values bool;
+  ignore_unchanged_values bool;
   commonColumns text[];
   time_stamp_to_use timestamptz := current_timestamp;
   range_lower timestamptz;
@@ -35,10 +35,10 @@ BEGIN
   sys_period := TG_ARGV[0];
   history_table := TG_ARGV[1];
   ignore_unchanged_values := TG_ARGV[3];
-  
-	IF ignore_unchanged_values AND TG_OP = 'UPDATE' AND NEW IS NOT DISTINCT FROM OLD THEN
-		RETURN OLD;
-	END IF;
+
+  IF ignore_unchanged_values AND TG_OP = 'UPDATE' AND NEW IS NOT DISTINCT FROM OLD THEN
+    RETURN OLD;
+  END IF;
 
   -- check if sys_period exists on original table
   SELECT atttypid, attndims INTO holder FROM pg_attribute WHERE attrelid = TG_RELID AND attname = sys_period AND NOT attisdropped;
