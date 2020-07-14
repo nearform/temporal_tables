@@ -1,7 +1,7 @@
 
 # Temporal Tables
 
-_Version: 0.2.0_
+_Version: 0.3.0_
 
 This is an attempt to rewrite the postgresql [temporal_tables](https://github.com/arkhipov/temporal_tables) extension in PL/pgSQL, without the need for external c extension.
 
@@ -12,6 +12,10 @@ The version provided in `versioning_function.sql` is a drop-in replacement.
 It works exactly the same way, but lacks the [set_system_time](https://github.com/arkhipov/temporal_tables#advanced-usage) function to work with the current time.
 
 The version in `versioning_function_nochecks.sql` is similar to the previous one, but all validation checks have been removed. This version is 2x faster than the normal one, but more dangerous and prone to errors.
+
+With time, added some new functionality diverging from the original implementations. New functionalities are however still retro-compatible:
+
+- [Ignore updates with no actual changes](#ignore-unchanged-values)
 
 <a name="usage"></a>
 ## Usage
@@ -93,6 +97,28 @@ name  |     state     |                            sys_period
  test1 | inserted      | ["2017-08-01 16:09:45.542983+02","2017-08-01 16:09:54.984179+02")
  test1 | updated       | ["2017-08-01 16:09:54.984179+02","2017-08-01 16:10:08.880571+02")
  test1 | updated twice | ["2017-08-01 16:10:08.880571+02","2017-08-01 16:10:17.33659+02")
+
+<a name="additional-features"></a>
+## Additional features
+
+<a name="ignore-unchanged-values"></a>
+### Ignore updates without actual change
+
+By default this extension creates a record in the history table for every update that occurs in the versioned table, regardless of any change actually happening.
+
+We added a fourth paramater to the trigger to change this behaviour and only record updates that result in an actual change.
+
+It's worth noting that the actual change is checked only in the source table, so if the history table only has a subset of the columns this extension will still add a new record to history even if the changed column is not present in the history table.
+
+The paramater is set by default to `false`, set it to `true` to stop tracking updates without actual changes:
+
+```sql
+CREATE TRIGGER versioning_trigger
+BEFORE INSERT OR UPDATE OR DELETE ON subscriptions
+FOR EACH ROW EXECUTE PROCEDURE versioning(
+  'sys_period', 'subscriptions_history', true, true
+);
+```
 
 <a name="migrations"></a>
 ## Migrations
