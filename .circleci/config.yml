@@ -39,5 +39,5 @@ workflows:
     jobs:
       - run-test:
           matrix:
-          parameters:
-            version: [pg95, pg10]
+            parameters:
+              version: [pg95, pg10]
