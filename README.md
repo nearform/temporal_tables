@@ -1,6 +1,8 @@
 
 # Temporal Tables
 
+![](https://github.com/nearform/temporal_tables/workflows/ci/badge.svg)
+
 _Version: 0.3.0_
 
 This is an attempt to rewrite the postgresql [temporal_tables](https://github.com/arkhipov/temporal_tables) extension in PL/pgSQL, without the need for external c extension.
