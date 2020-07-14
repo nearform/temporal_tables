@@ -5,7 +5,7 @@ psql temporal_tables_test -q -f versioning_function_nochecks.sql
 
 mkdir -p test/result
 
-TESTS="versioning versioning_camel_case structure combinations different_schema unchanged_values"
+TESTS="versioning upper_case structure combinations different_schema unchanged_values"
 
 for name in $TESTS; do
   echo ""
