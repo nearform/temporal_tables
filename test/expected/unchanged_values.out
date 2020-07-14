@@ -1,0 +1,61 @@
+CREATE TABLE versioning (a bigint, b bigint, sys_period tstzrange);
+-- Insert some data before versioning is enabled.
+INSERT INTO versioning (a, b, sys_period) VALUES (1, 1, tstzrange('-infinity', NULL));
+INSERT INTO versioning (a, b, sys_period) VALUES (2, 2, tstzrange('2000-01-01', NULL));
+CREATE TABLE versioning_history (a bigint, b bigint, sys_period tstzrange);
+CREATE TRIGGER versioning_trigger
+BEFORE INSERT OR UPDATE OR DELETE ON versioning
+FOR EACH ROW EXECUTE PROCEDURE versioning('sys_period', 'versioning_history', false, true);
+-- Update with no changes.
+BEGIN;
+UPDATE versioning SET b = 2 WHERE a = 2;
+SELECT a, b, lower(sys_period) = CURRENT_TIMESTAMP FROM versioning ORDER BY a, sys_period;
+ a | b | ?column?
+---+---+----------
+ 1 | 1 | f
+ 2 | 2 | f
+(2 rows)
+
+SELECT a, b, upper(sys_period) = CURRENT_TIMESTAMP FROM versioning_history ORDER BY a, sys_period;
+ a | b | ?column?
+---+---+----------
+(0 rows)
+
+SELECT a, b FROM versioning WHERE lower(sys_period) = CURRENT_TIMESTAMP ORDER BY a, sys_period;
+ a | b
+---+---
+(0 rows)
+
+COMMIT;
+-- Make sure that the next transaction's CURRENT_TIMESTAMP is different.
+SELECT pg_sleep(0.1);
+ pg_sleep
+----------
+
+(1 row)
+
+-- Update with actual changes.
+BEGIN;
+UPDATE versioning SET b = 3 WHERE a = 2;
+SELECT a, b, lower(sys_period) = CURRENT_TIMESTAMP FROM versioning ORDER BY a, sys_period;
+ a | b | ?column?
+---+---+----------
+ 1 | 1 | f
+ 2 | 3 | t
+(2 rows)
+
+SELECT a, b, upper(sys_period) = CURRENT_TIMESTAMP FROM versioning_history ORDER BY a, sys_period;
+ a | b | ?column?
+---+---+----------
+ 2 | 2 | t
+(1 row)
+
+SELECT a, b FROM versioning WHERE lower(sys_period) = CURRENT_TIMESTAMP ORDER BY a, sys_period;
+ a | b
+---+---
+ 2 | 3
+(1 row)
+
+COMMIT;
+DROP TABLE versioning;
+DROP TABLE versioning_history;
