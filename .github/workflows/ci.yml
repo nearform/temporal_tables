@@ -1,0 +1,43 @@
+name: ci
+
+on: [push, pull_request]
+
+env:
+  CI: true
+  PGHOST: localhost
+  PGPORT: 5432
+  PGUSER: postgres
+  PGPASSWORD: postgres
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: ${{ matrix.pg }}
+        env:
+          POSTGRES_PASSWORD: postgres
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    strategy:
+      matrix:
+        pg: [postgres:9.5-alpine, postgres:9.6-alpine, postgres:10-alpine]
+
+   steps:
+      - uses: actions/checkout@v2
+
+      - name: Run tests
+        run: |
+          make run_test
+
+      - name: Run tests no check
+        run: |
+          make run_test_nochecks
