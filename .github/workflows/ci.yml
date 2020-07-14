@@ -31,7 +31,7 @@ jobs:
       matrix:
         pg: [postgres:9.5-alpine, postgres:9.6-alpine, postgres:10-alpine]
 
-   steps:
+    steps:
       - uses: actions/checkout@v2
 
       - name: Run tests
