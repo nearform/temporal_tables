@@ -165,12 +165,7 @@ BEGIN
       AND history.attname != sys_period;
 
     EXECUTE ('INSERT INTO ' ||
-      CASE split_part(history_table, '.', 2)
-      WHEN '' THEN
-        quote_ident(history_table)
-      ELSE
-        quote_ident(split_part(history_table, '.', 1)) || '.' || quote_ident(split_part(history_table, '.', 2))
-      END ||
+      history_table ||
       '(' ||
       array_to_string(commonColumns , ',') ||
       ',' ||
