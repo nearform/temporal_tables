@@ -1,7 +1,7 @@
 
 # Temporal Tables
 
-_Version: 0.3.0_
+_Version: 0.4.0_
 
 This is an attempt to rewrite the postgresql [temporal_tables](https://github.com/arkhipov/temporal_tables) extension in PL/pgSQL, without the need for external c extension.
 
@@ -65,6 +65,11 @@ FOR EACH ROW EXECUTE PROCEDURE versioning(
   'sys_period', 'subscriptions_history', true
 );
 ```
+
+A note on the history table name. Previous versions of this extension quoted and escaped it before usage.
+Starting version 0.4.0 we are not escaping it anymore and users need to provide the escaped version as a parameter to the trigger.
+
+This is consistent with the c version, simplifies the extension code and fixes an issue with upper case names that weren't properly supported.
 
 Now test with some data:
 
