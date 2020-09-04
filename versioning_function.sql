@@ -165,7 +165,7 @@ BEGIN
       AND history.attname != sys_period;
 
     EXECUTE ('INSERT INTO ' ||
-      history_table ||
+      quote_ident(history_table) ||
       '(' ||
       array_to_string(commonColumns , ',') ||
       ',' ||
