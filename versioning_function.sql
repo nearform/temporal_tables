@@ -80,18 +80,18 @@ BEGIN
     -- to support postgres < 9.6
     IF pg_version < 90600 THEN
       -- check if history table exits
-      IF to_regclass(history_table::cstring) IS NULL THEN
-        RAISE 'relation "%" does not exist', history_table;
+      IF to_regclass(quote_ident(history_table)::cstring) IS NULL THEN
+        RAISE 'relation "%" does not exist', quote_ident(history_table);
       END IF;
     ELSE
-      IF to_regclass(history_table) IS NULL THEN
-        RAISE 'relation "%" does not exist', history_table;
+      IF to_regclass(quote_ident(history_table)) IS NULL THEN
+        RAISE 'relation "%" does not exist', quote_ident(history_table);
       END IF;
     END IF;
 
     -- check if history table has sys_period
-    IF NOT EXISTS(SELECT * FROM pg_attribute WHERE attrelid = history_table::regclass AND attname = sys_period AND NOT attisdropped) THEN
-      RAISE 'history relation "%" does not contain system period column "%"', history_table, sys_period USING
+    IF NOT EXISTS(SELECT * FROM pg_attribute WHERE attrelid = quote_ident(history_table)::regclass AND attname = sys_period AND NOT attisdropped) THEN
+      RAISE 'history relation "%" does not contain system period column "%"', quote_ident(history_table), sys_period USING
       HINT = 'history relation must contain system period column with the same name and data type as the versioned one';
     END IF;
 
@@ -119,7 +119,7 @@ BEGIN
     WITH history AS
       (SELECT attname, atttypid
       FROM   pg_attribute
-      WHERE  attrelid = history_table::regclass
+      WHERE  attrelid = quote_ident(history_table)::regclass
       AND    attnum > 0
       AND    NOT attisdropped),
       main AS
@@ -129,7 +129,7 @@ BEGIN
       AND    attnum > 0
       AND    NOT attisdropped)
     SELECT
-      history.attname AS history_name,
+      quote_ident(history.attname) AS history_name,
       main.attname AS main_name,
       history.atttypid AS history_type,
       main.atttypid AS main_type
@@ -149,7 +149,7 @@ BEGIN
     WITH history AS
       (SELECT attname
       FROM   pg_attribute
-      WHERE  attrelid = history_table::regclass
+      WHERE  attrelid = quote_ident(history_table)::regclass
       AND    attnum > 0
       AND    NOT attisdropped),
       main AS

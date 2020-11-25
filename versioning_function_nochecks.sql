@@ -46,7 +46,7 @@ BEGIN
     WITH history AS
       (SELECT attname
       FROM   pg_attribute
-      WHERE  attrelid = history_table::regclass
+      WHERE  attrelid = quote_ident(history_table)::regclass
       AND    attnum > 0
       AND    NOT attisdropped),
       main AS
