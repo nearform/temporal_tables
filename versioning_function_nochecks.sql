@@ -6,11 +6,23 @@ DECLARE
   manipulate jsonb;
   ignore_unchanged_values bool;
   commonColumns text[];
-  time_stamp_to_use timestamptz := current_timestamp;
+  time_stamp_to_use timestamptz;
   range_lower timestamptz;
   transaction_info txid_snapshot;
   existing_range tstzrange;
+  user_defined_system_time text;
 BEGIN
+  -- set custom system time if exists
+  SELECT current_setting('user_defined.system_time') INTO user_defined_system_time;
+  IF NOT FOUND OR (user_defined_system_time <> '') IS NOT TRUE THEN
+    time_stamp_to_use := CURRENT_TIMESTAMP;
+  ELSE
+    SELECT TO_TIMESTAMP(
+        user_defined_system_time,
+        'YYYY-MM-DD HH24:MI:SS'
+    ) INTO time_stamp_to_use;
+  END IF;
+
   -- version 0.4.0
 
   sys_period := TG_ARGV[0];
