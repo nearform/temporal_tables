@@ -1,0 +1,31 @@
+-- Invalid dates
+SELECT set_system_time('2022-13-01 22:59:59');
+ERROR:  You must enter a timestamp in the following format: YYYY-MM-DD HH:MI:SS (hours are in 24-hour format 00-23)
+SELECT set_system_time('22-13-01 22:59:59');
+ERROR:  You must enter a timestamp in the following format: YYYY-MM-DD HH:MI:SS (hours are in 24-hour format 00-23)
+SELECT set_system_time('2022-12-99 22:59:59');
+ERROR:  You must enter a timestamp in the following format: YYYY-MM-DD HH:MI:SS (hours are in 24-hour format 00-23)
+-- Invalid time
+SELECT set_system_time('2022-01-11 99:59:59');
+ERROR:  You must enter a timestamp in the following format: YYYY-MM-DD HH:MI:SS (hours are in 24-hour format 00-23)
+SELECT set_system_time('2022-01-11 22:99:59');
+ERROR:  You must enter a timestamp in the following format: YYYY-MM-DD HH:MI:SS (hours are in 24-hour format 00-23)
+SELECT set_system_time('2022-01-11 22:59:99');
+ERROR:  You must enter a timestamp in the following format: YYYY-MM-DD HH:MI:SS (hours are in 24-hour format 00-23)
+SELECT set_system_time('2022-01-11 22:59');
+ERROR:  You must enter a timestamp in the following format: YYYY-MM-DD HH:MI:SS (hours are in 24-hour format 00-23)
+SELECT set_system_time('2022-01-11 22');
+ERROR:  You must enter a timestamp in the following format: YYYY-MM-DD HH:MI:SS (hours are in 24-hour format 00-23)
+-- Invalid values
+SELECT set_system_time('Invalid string value');
+ERROR:  You must enter a timestamp in the following format: YYYY-MM-DD HH:MI:SS (hours are in 24-hour format 00-23)
+SELECT set_system_time(123);
+ERROR:  function set_system_time(integer) does not exist
+LINE 1: SELECT set_system_time(123);
+               ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+SELECT set_system_time();
+ERROR:  function set_system_time() does not exist
+LINE 1: SELECT set_system_time();
+               ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
