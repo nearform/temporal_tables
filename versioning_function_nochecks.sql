@@ -11,14 +11,16 @@ DECLARE
   transaction_info txid_snapshot;
   existing_range tstzrange;
 BEGIN
-  -- version 0.4.0
+  -- version 0.4.1
 
   sys_period := TG_ARGV[0];
   history_table := TG_ARGV[1];
   ignore_unchanged_values := TG_ARGV[3];
 
-  IF ignore_unchanged_values AND TG_OP = 'UPDATE' AND NEW IS NOT DISTINCT FROM OLD THEN
-    RETURN OLD;
+  IF ignore_unchanged_values AND TG_OP = 'UPDATE' THEN
+    IF NEW IS NOT DISTINCT FROM OLD THEN
+      RETURN OLD;
+    END IF;
   END IF;
 
   IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN

@@ -14,7 +14,7 @@ DECLARE
   holder2 record;
   pg_version integer;
 BEGIN
-  -- version 0.4.0
+  -- version 0.4.1
 
   IF TG_WHEN != 'BEFORE' OR TG_LEVEL != 'ROW' THEN
     RAISE TRIGGER_PROTOCOL_VIOLATED USING
@@ -36,8 +36,10 @@ BEGIN
   history_table := TG_ARGV[1];
   ignore_unchanged_values := TG_ARGV[3];
 
-  IF ignore_unchanged_values AND TG_OP = 'UPDATE' AND NEW IS NOT DISTINCT FROM OLD THEN
-    RETURN OLD;
+  IF ignore_unchanged_values AND TG_OP = 'UPDATE' THEN
+    IF NEW IS NOT DISTINCT FROM OLD THEN
+      RETURN OLD;
+    END IF;
   END IF;
 
   -- check if sys_period exists on original table
