@@ -13,6 +13,8 @@ DECLARE
   holder record;
   holder2 record;
   pg_version integer;
+  newVersion record;
+  oldVersion record;
 BEGIN
   -- version 0.4.0
 
@@ -35,10 +37,6 @@ BEGIN
   sys_period := TG_ARGV[0];
   history_table := TG_ARGV[1];
   ignore_unchanged_values := TG_ARGV[3];
-
-  IF ignore_unchanged_values AND TG_OP = 'UPDATE' AND NEW IS NOT DISTINCT FROM OLD THEN
-    RETURN OLD;
-  END IF;
 
   -- check if sys_period exists on original table
   SELECT atttypid, attndims INTO holder FROM pg_attribute WHERE attrelid = TG_RELID AND attname = sys_period AND NOT attisdropped;
@@ -163,7 +161,18 @@ BEGIN
       INNER JOIN main
       ON history.attname = main.attname
       AND history.attname != sys_period;
-
+    -- skip version if it would be identical to the previous version
+    IF ignore_unchanged_values AND TG_OP = 'UPDATE' AND array_length(commonColumns, 1) > 0 THEN
+      EXECUTE 'SELECT ROW($1.' || array_to_string(commonColumns , ', $1.') || ')'
+        USING NEW
+        INTO newVersion;
+      EXECUTE 'SELECT ROW($1.' || array_to_string(commonColumns , ', $1.') || ')'
+        USING OLD
+        INTO oldVersion;
+      IF newVersion IS NOT DISTINCT FROM oldVersion THEN
+        RETURN NEW;
+      END IF;
+    END IF;
     EXECUTE ('INSERT INTO ' ||
       history_table ||
       '(' ||

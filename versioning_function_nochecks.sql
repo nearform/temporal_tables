@@ -10,6 +10,8 @@ DECLARE
   range_lower timestamptz;
   transaction_info txid_snapshot;
   existing_range tstzrange;
+  newVersion record;
+  oldVersion record;
 BEGIN
   -- version 0.4.0
 
@@ -17,9 +19,6 @@ BEGIN
   history_table := TG_ARGV[1];
   ignore_unchanged_values := TG_ARGV[3];
 
-  IF ignore_unchanged_values AND TG_OP = 'UPDATE' AND NEW IS NOT DISTINCT FROM OLD THEN
-    RETURN OLD;
-  END IF;
 
   IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
     -- Ignore rows already modified in this transaction
@@ -60,7 +59,17 @@ BEGIN
       INNER JOIN main
       ON history.attname = main.attname
       AND history.attname != sys_period;
-
+    -- skip version if it would be identical to the previous version
+    IF ignore_unchanged_values AND TG_OP = 'UPDATE' AND array_length(commonColumns, 1) > 0 THEN      EXECUTE 'SELECT ROW($1.' || array_to_string(commonColumns , ', $1.') || ')'
+        USING NEW
+        INTO newVersion;
+      EXECUTE 'SELECT ROW($1.' || array_to_string(commonColumns , ', $1.') || ')'
+        USING OLD
+        INTO oldVersion;
+      IF newVersion IS NOT DISTINCT FROM oldVersion THEN
+        RETURN NEW;
+      END IF;
+    END IF;
     EXECUTE ('INSERT INTO ' ||
       history_table ||
       '(' ||
