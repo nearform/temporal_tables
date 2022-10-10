@@ -9,7 +9,6 @@ const files = ["versioning_function", "versioning_function_nochecks"];
 files.forEach((fileName) => {
   const data = readFileSync(__dirname + `/../${fileName}.sql`, {
     encoding: "utf8",
-    flag: "r",
   });
 
   const updated = data.replace(
