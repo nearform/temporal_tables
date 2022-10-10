@@ -6,6 +6,9 @@
     "type": "git",
     "url": "git+https://github.com/nearform/temporal_tables.git"
   },
+  "scripts": {
+    "update-version": "node ./scripts/update-version.js"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",

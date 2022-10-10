@@ -1,3 +1,5 @@
+-- version 0.4.0
+
 CREATE OR REPLACE FUNCTION versioning()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -11,7 +13,6 @@ DECLARE
   transaction_info txid_snapshot;
   existing_range tstzrange;
 BEGIN
-  -- version 0.4.0
 
   sys_period := TG_ARGV[0];
   history_table := TG_ARGV[1];
