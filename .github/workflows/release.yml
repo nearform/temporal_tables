@@ -1,0 +1,27 @@
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      semver:
+        description: The semver to use
+        required: true
+        default: patch
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+  pull_request:
+    types: [closed]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: nearform/optic-release-automation-action@v3
+        with:
+          semver: ${{ github.event.inputs.semver }}
+          commit-message: "chore: release {version}"
+          build-command: |
+            npm run update-version

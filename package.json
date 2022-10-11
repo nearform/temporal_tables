@@ -1,0 +1,19 @@
+{
+  "name": "temporal_tables",
+  "version": "0.4.0",
+  "description": "A postgresql temporal_tables extension in PL/pgSQL",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nearform/temporal_tables.git"
+  },
+  "scripts": {
+    "update-version": "node ./scripts/update-version.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/nearform/temporal_tables/issues"
+  },
+  "homepage": "https://github.com/nearform/temporal_tables#readme"
+}

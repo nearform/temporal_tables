@@ -1,3 +1,5 @@
+-- version 0.4.0
+
 CREATE OR REPLACE FUNCTION versioning()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -14,7 +16,6 @@ DECLARE
   holder2 record;
   pg_version integer;
 BEGIN
-  -- version 0.4.0
 
   IF TG_WHEN != 'BEFORE' OR TG_LEVEL != 'ROW' THEN
     RAISE TRIGGER_PROTOCOL_VIOLATED USING
