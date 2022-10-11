@@ -21,7 +21,6 @@ jobs:
     steps:
       - uses: nearform/optic-release-automation-action@v3
         with:
-          github-token: ${{ secrets.github_token }}
           semver: ${{ github.event.inputs.semver }}
           commit-message: "chore: release {version}"
           build-command: |
