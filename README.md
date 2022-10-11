@@ -114,7 +114,7 @@ By default this extension creates a record in the history table for every update
 
 We added a fourth paramater to the trigger to change this behaviour and only record updates that result in an actual change.
 
-It's worth noting that the actual change is checked only in the source table, so if the history table only has a subset of the columns this extension will still add a new record to history even if the changed column is not present in the history table.
+It is worth mentioning that before making the change, a check is performed on the source table against the history table, in such a way that if the history table has only a subset of the columns of the source table, and you are performing an update in a column that is not present in this subset (this means the column does not exist in the history table), this extension will NOT add a new record to the history. Then you can have columns in the source table that create no new versions if modified by not including those columns in the history table.
 
 The paramater is set by default to `false`, set it to `true` to stop tracking updates without actual changes:
 
