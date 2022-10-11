@@ -9,7 +9,7 @@ TESTS="
   no_history_table no_history_system_period no_system_period
   invalid_system_period_values invalid_system_period invalid_types
   versioning upper_case structure combinations
-  different_schema unchanged_values"
+  different_schema unchanged_values unchanged_version_values"
 
 for name in $TESTS; do
   echo ""
