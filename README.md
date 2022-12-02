@@ -134,9 +134,9 @@ During the life of an application is may be necessary to change the schema of a 
 
 ### What happens if a column is added to the original table but not to the history table?
 
-The new column will be ignore, meaning that the updated row is transferred to the history table, but without the value of the new column. This means that you will lose that specific data.
+The new column will be ignored, meaning that the updated row is transferred to the history table, but without the value of the new column. This means that you will lose that specific data.
 
-There are valid use case for this, in example when you are not interested in storing the historic values of that column.
+There are valid use cases for this, for example when you are not interested in storing the historic values of that column.
 
 **Beware that temporal_tables won't raise an error**
 
