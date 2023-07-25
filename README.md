@@ -110,6 +110,8 @@ Should return something similar to:
 
 ### Ignore updates without actual change
 
+**NOTE: This feature does not work for tables with columns with types that does not support equality operator (e.g. PostGIS types, JSON types, etc.).**
+
 By default this extension creates a record in the history table for every update that occurs in the versioned table, regardless of any change actually happening.
 
 We added a fourth paramater to the trigger to change this behaviour and only record updates that result in an actual change.

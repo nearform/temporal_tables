@@ -19,6 +19,11 @@ BEGIN
   history_table := TG_ARGV[1];
   ignore_unchanged_values := TG_ARGV[3];
 
+  IF ignore_unchanged_values AND TG_OP = 'UPDATE' THEN
+    IF NEW IS NOT DISTINCT FROM OLD THEN
+      RETURN OLD;
+    END IF;
+  END IF;
 
   IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
     -- Ignore rows already modified in the current transaction

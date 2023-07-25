@@ -7,7 +7,9 @@ mkdir -p test/result
 
 TESTS="
   versioning upper_case structure combinations different_schema unchanged_values
-  unchanged_version_values"
+  non_equality_types non_equality_types_unchanged_values
+  unchanged_version_values
+  "
 
 for name in $TESTS; do
   echo ""

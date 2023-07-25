@@ -38,6 +38,12 @@ BEGIN
   history_table := TG_ARGV[1];
   ignore_unchanged_values := TG_ARGV[3];
 
+  IF ignore_unchanged_values AND TG_OP = 'UPDATE' THEN
+    IF NEW IS NOT DISTINCT FROM OLD THEN
+      RETURN OLD;
+    END IF;
+  END IF;
+
   -- check if sys_period exists on original table
   SELECT atttypid, attndims INTO holder FROM pg_attribute WHERE attrelid = TG_RELID AND attname = sys_period AND NOT attisdropped;
   IF NOT FOUND THEN
