@@ -10,7 +10,6 @@ TESTS="
   non_equality_types non_equality_types_unchanged_values
   unchanged_version_values
   "
->>>>>>> upstream/master
 
 for name in $TESTS; do
   echo ""

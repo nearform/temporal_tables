@@ -14,23 +14,16 @@ DECLARE
   newVersion record;
   oldVersion record;
 BEGIN
-<<<<<<< HEAD
-  -- version 0.4.1
-=======
->>>>>>> upstream/master
 
   sys_period := TG_ARGV[0];
   history_table := TG_ARGV[1];
   ignore_unchanged_values := TG_ARGV[3];
 
-<<<<<<< HEAD
   IF ignore_unchanged_values AND TG_OP = 'UPDATE' THEN
     IF NEW IS NOT DISTINCT FROM OLD THEN
       RETURN OLD;
     END IF;
   END IF;
-=======
->>>>>>> upstream/master
 
   IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
     -- Ignore rows already modified in the current transaction
