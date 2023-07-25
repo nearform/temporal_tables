@@ -32,7 +32,7 @@ jobs:
         pg: ["postgres:9.5-alpine", "postgres:9.6-alpine", "postgres:10-alpine", "postgres:11-alpine", "postgres:12-alpine", "postgres:13-alpine"]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Run tests
         run: |

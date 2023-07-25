@@ -1,9 +1,6 @@
-
 # Temporal Tables
 
 ![](https://github.com/nearform/temporal_tables/workflows/ci/badge.svg)
-
-_Version: 0.4.1_
 
 This is an attempt to rewrite the postgresql [temporal_tables](https://github.com/arkhipov/temporal_tables) extension in PL/pgSQL, without the need for external c extension.
 
@@ -20,6 +17,7 @@ With time, added some new functionality diverging from the original implementati
 - [Ignore updates with no actual changes](#ignore-unchanged-values)
 
 <a name="usage"></a>
+
 ## Usage
 
 Create a database and the versioning function:
@@ -98,17 +96,18 @@ SELECT * FROM subscriptions_history
 
 Should return something similar to:
 
-
-name  |     state     |                            sys_period
------ | ------------- | -------------------------------------------------------------------
- test1 | inserted      | ["2017-08-01 16:09:45.542983+02","2017-08-01 16:09:54.984179+02")
- test1 | updated       | ["2017-08-01 16:09:54.984179+02","2017-08-01 16:10:08.880571+02")
- test1 | updated twice | ["2017-08-01 16:10:08.880571+02","2017-08-01 16:10:17.33659+02")
+| name  | state         | sys_period                                                        |
+| ----- | ------------- | ----------------------------------------------------------------- |
+| test1 | inserted      | ["2017-08-01 16:09:45.542983+02","2017-08-01 16:09:54.984179+02") |
+| test1 | updated       | ["2017-08-01 16:09:54.984179+02","2017-08-01 16:10:08.880571+02") |
+| test1 | updated twice | ["2017-08-01 16:10:08.880571+02","2017-08-01 16:10:17.33659+02")  |
 
 <a name="additional-features"></a>
+
 ## Additional features
 
 <a name="ignore-unchanged-values"></a>
+
 ### Ignore updates without actual change
 
 **NOTE: This feature does not work for tables with columns with types that does not support equality operator (e.g. PostGIS types, JSON types, etc.).**
@@ -117,7 +116,7 @@ By default this extension creates a record in the history table for every update
 
 We added a fourth paramater to the trigger to change this behaviour and only record updates that result in an actual change.
 
-It's worth noting that the actual change is checked only in the source table, so if the history table only has a subset of the columns this extension will still add a new record to history even if the changed column is not present in the history table.
+It is worth mentioning that before making the change, a check is performed on the source table against the history table, in such a way that if the history table has only a subset of the columns of the source table, and you are performing an update in a column that is not present in this subset (this means the column does not exist in the history table), this extension will NOT add a new record to the history. Then you can have columns in the source table that create no new versions if modified by not including those columns in the history table.
 
 The paramater is set by default to `false`, set it to `true` to stop tracking updates without actual changes:
 
@@ -130,15 +129,16 @@ FOR EACH ROW EXECUTE PROCEDURE versioning(
 ```
 
 <a name="migrations"></a>
+
 ## Migrations
 
 During the life of an application is may be necessary to change the schema of a table. In order for temporal_tables to continue to work properly the same migrations should be applied to the history table as well.
 
 ### What happens if a column is added to the original table but not to the history table?
 
-The new column will be ignore, meaning that the updated row is transferred to the history table, but without the value of the new column. This means that you will lose that specific data.
+The new column will be ignored, meaning that the updated row is transferred to the history table, but without the value of the new column. This means that you will lose that specific data.
 
-There are valid use case for this, in example when you are not interested in storing the historic values of that column.
+There are valid use cases for this, for example when you are not interested in storing the historic values of that column.
 
 **Beware that temporal_tables won't raise an error**
 
@@ -151,6 +151,7 @@ From that point on the old column in the history table will be ignored and will 
 If the column doesn't accept null values you'll need to modify it to allow for null values, otherwise temporal_tables won't be able to create new rows and all operations on the original table will fail
 
 <a name="test"></a>
+
 ## Test
 
 In order to run tests:
@@ -170,6 +171,7 @@ make run_test_nochecks
 Obviously, this suite won't run the tests about the error reporting.
 
 <a name="performance_tests"></a>
+
 ## Performance tests
 
 For performance tests run:
@@ -197,10 +199,12 @@ This required the original extentions to be installed, but will automatically ad
 On the test machine (my laptop) the complete version is 2x slower than the nochecks versions and 16x slower than the original version.
 
 Two comments about those results:
+
 - original c version makes some use of caching (i.e to share an execution plan), whilst this version doesn't. This is propably accounting for a good chunk of the performance difference. At the moment there's not plan of implementing such caching in this version.
 - The trigger still executes in under 1ms and in production environments the the network latency should be more relevant than the trigger itself.
 
 <a name="the-team"></a>
+
 ## The team
 
 ### Paolo Chiodi
@@ -210,6 +214,7 @@ Two comments about those results:
 [https://twitter.com/paolochiodi](https://twitter.com/paolochiodi)
 
 <a name="acknowledgements"></a>
+
 ## Acknowledgements
 
 This project was kindly sponsored by [nearForm](http://nearform.com).
