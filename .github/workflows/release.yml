@@ -22,9 +22,9 @@ jobs:
       pull-requests: write
     runs-on: ubuntu-latest
     steps:
-      - uses: nearform-actions/optic-release-automation-action@v4
+      - uses: ollyjohn/optic-release-automation-action@main
         with:
           semver: ${{ github.event.inputs.semver }}
-          commit-message: 'chore: release {version}'
+          commit-message: "chore: release {version}"
           build-command: |
             npm run update-version
