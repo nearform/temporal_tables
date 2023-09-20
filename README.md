@@ -23,7 +23,6 @@ Create a database and the versioning function:
 ```sh
 createdb temporal_test
 psql temporal_test < versioning_function.sql
-psql temporal_test < system_time_function.sql
 ```
 
 If you would like to have `set_system_time` function available (more details [below](#system-time)) you should run the following as well:
