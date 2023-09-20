@@ -110,7 +110,7 @@ name  |     state     |                            sys_period
 <a name="system-time"></a>
 ## Setting custom system time
 If you want to take advantage of setting a custom system time you can use the `set_system_time` function. It is a port of the original [set_system_time](https://github.com/arkhipov/temporal_tables#advanced-usage).
-The function accepts string representation of timestamp in the following format: `YYYY-MM-DD HH:MI:SS` (hours are in 24-hour format 00-23). 
+The function accepts string representation of timestamp in the following format: `YYYY-MM-DD HH:MI:SS.MS.US` - where hours are in 24-hour format 00-23 and the MS (milliseconds) and US (microseconds) portions are optional. 
 Same as the original function, calling it with `null` will reset to default setting (using the CURRENT_TIMESTAMP):
 
 ```sql

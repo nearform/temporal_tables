@@ -13,7 +13,7 @@ FOR EACH ROW EXECUTE PROCEDURE versioning('sys_period', 'versioning_history', fa
 -- Insert.
 BEGIN;
 
-SELECT set_system_time('2001-01-01 22:59:59');
+SELECT set_system_time('2001-01-01 22:59:59.001.000234');
 
 INSERT INTO versioning (a) VALUES (3);
 
@@ -43,7 +43,7 @@ COMMIT;
 -- Delete.
 BEGIN;
 
-SELECT set_system_time('2022-01-11 12:00:00');
+SELECT set_system_time('2022-01-11 12:00:00.000.000000');
 
 DELETE FROM versioning WHERE a = 4;
 
