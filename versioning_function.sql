@@ -1,3 +1,5 @@
+-- version 0.6.0
+
 CREATE OR REPLACE FUNCTION versioning()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -8,11 +10,12 @@ DECLARE
   commonColumns text[];
   time_stamp_to_use timestamptz;
   range_lower timestamptz;
-  transaction_info txid_snapshot;
   existing_range tstzrange;
   holder record;
   holder2 record;
   pg_version integer;
+  newVersion record;
+  oldVersion record;
   user_defined_system_time text;
 BEGIN
   -- set custom system time if exists
@@ -29,8 +32,6 @@ BEGIN
     EXCEPTION WHEN OTHERS THEN
       time_stamp_to_use := CURRENT_TIMESTAMP;
   END;
-
-  -- version 0.4.0
 
   IF TG_WHEN != 'BEFORE' OR TG_LEVEL != 'ROW' THEN
     RAISE TRIGGER_PROTOCOL_VIOLATED USING
@@ -52,8 +53,10 @@ BEGIN
   history_table := TG_ARGV[1];
   ignore_unchanged_values := TG_ARGV[3];
 
-  IF ignore_unchanged_values AND TG_OP = 'UPDATE' AND NEW IS NOT DISTINCT FROM OLD THEN
-    RETURN OLD;
+  IF ignore_unchanged_values AND TG_OP = 'UPDATE' THEN
+    IF NEW IS NOT DISTINCT FROM OLD THEN
+      RETURN OLD;
+    END IF;
   END IF;
 
   -- check if sys_period exists on original table
@@ -79,10 +82,8 @@ BEGIN
   END IF;
 
   IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
-    -- Ignore rows already modified in this transaction
-    transaction_info := txid_current_snapshot();
-    IF OLD.xmin::text >= (txid_snapshot_xmin(transaction_info) % (2^32)::bigint)::text
-    AND OLD.xmin::text <= (txid_snapshot_xmax(transaction_info) % (2^32)::bigint)::text THEN
+    -- Ignore rows already modified in the current transaction
+    IF OLD.xmin::text = (txid_current() % (2^32)::bigint)::text THEN
       IF TG_OP = 'DELETE' THEN
         RETURN OLD;
       END IF;
@@ -179,7 +180,18 @@ BEGIN
       INNER JOIN main
       ON history.attname = main.attname
       AND history.attname != sys_period;
-
+    -- skip version if it would be identical to the previous version
+    IF ignore_unchanged_values AND TG_OP = 'UPDATE' AND array_length(commonColumns, 1) > 0 THEN
+      EXECUTE 'SELECT ROW($1.' || array_to_string(commonColumns , ', $1.') || ')'
+        USING NEW
+        INTO newVersion;
+      EXECUTE 'SELECT ROW($1.' || array_to_string(commonColumns , ', $1.') || ')'
+        USING OLD
+        INTO oldVersion;
+      IF newVersion IS NOT DISTINCT FROM oldVersion THEN
+        RETURN NEW;
+      END IF;
+    END IF;
     EXECUTE ('INSERT INTO ' ||
       history_table ||
       '(' ||
