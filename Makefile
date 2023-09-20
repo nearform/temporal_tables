@@ -11,6 +11,7 @@ performance_test:
 	@echo "\nDB Setup\n"
 	@createdb temporal_tables_test
 	@psql temporal_tables_test -q -f versioning_function.sql
+	@psql temporal_tables_test -q -f system_time_function.sql
 	@psql temporal_tables_test -q -f test/performance/setup.sql
 
 	@echo "\nRun Test\n"
@@ -32,6 +33,7 @@ performance_test_nochecks:
 	@echo "\nDB Setup\n"
 	@createdb temporal_tables_test
 	@psql temporal_tables_test -q -f versioning_function_nochecks.sql
+	@psql temporal_tables_test -q -f system_time_function.sql
 	@psql temporal_tables_test -q -f test/performance/setup.sql
 
 	@echo "\nRun Test for NOCHECKS version\n"

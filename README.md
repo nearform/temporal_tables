@@ -8,8 +8,6 @@ The goal is to be able to use it on AWS RDS and other hosted solutions, where us
 
 The version provided in `versioning_function.sql` is a drop-in replacement.
 
-It works exactly the same way, but lacks the [set_system_time](https://github.com/arkhipov/temporal_tables#advanced-usage) function to work with the current time.
-
 The version in `versioning_function_nochecks.sql` is similar to the previous one, but all validation checks have been removed. This version is 2x faster than the normal one, but more dangerous and prone to errors.
 
 With time, added some new functionality diverging from the original implementations. New functionalities are however still retro-compatible:
@@ -25,6 +23,11 @@ Create a database and the versioning function:
 ```sh
 createdb temporal_test
 psql temporal_test < versioning_function.sql
+```
+
+If you would like to have `set_system_time` function available (more details [below](#system-time)) you should run the following as well:
+```sh
+psql temporal_test < system_time_function.sql
 ```
 
 Connect to the db:
@@ -82,7 +85,7 @@ DELETE FROM subscriptions WHERE name = 'test1';
 
 Take some time between a query and the following, otherwise the difference in the time periods won't be noticeable.
 
-After all the query are completed, you should check the tables content.
+After all the queries are completed, you should check the tables content.
 
 ```sql
 SELECT * FROM subscriptions;
@@ -91,7 +94,7 @@ SELECT * FROM subscriptions;
 Should return 0 rows
 
 ```sql
-SELECT * FROM subscriptions_history
+SELECT * FROM subscriptions_history;
 ```
 
 Should return something similar to:
@@ -101,6 +104,57 @@ Should return something similar to:
 | test1 | inserted      | ["2017-08-01 16:09:45.542983+02","2017-08-01 16:09:54.984179+02") |
 | test1 | updated       | ["2017-08-01 16:09:54.984179+02","2017-08-01 16:10:08.880571+02") |
 | test1 | updated twice | ["2017-08-01 16:10:08.880571+02","2017-08-01 16:10:17.33659+02")  |
+
+<a name="system-time"></a>
+## Setting custom system time
+If you want to take advantage of setting a custom system time you can use the `set_system_time` function. It is a port of the original [set_system_time](https://github.com/arkhipov/temporal_tables#advanced-usage).
+The function accepts string representation of timestamp in the following format: `YYYY-MM-DD HH:MI:SS.MS.US` - where hours are in 24-hour format 00-23 and the MS (milliseconds) and US (microseconds) portions are optional. 
+Same as the original function, calling it with `null` will reset to default setting (using the CURRENT_TIMESTAMP):
+
+```sql
+SELECT set_system_time(null);
+```
+Below is an example on how to use this function (continues using the example from above):
+
+Create the set_system_time function:
+
+```sh
+psql temporal_test < system_time_function.sql
+```
+
+Set a custom value for the system time:
+```sql
+SELECT set_system_time('1999-12-31 23:59:59');
+```
+
+Now test with some data:
+
+```sql
+INSERT INTO subscriptions (name, state) VALUES ('test2', 'inserted');
+UPDATE subscriptions SET state = 'updated' WHERE name = 'test2';
+UPDATE subscriptions SET state = 'updated twice' WHERE name = 'test2';
+DELETE FROM subscriptions WHERE name = 'test2';
+```
+
+Take some time between a query and the following, otherwise the difference in the time periods won't be noticeable.
+
+After all the queries are completed, you should check the `subscriptions_history` table content:
+
+```sql
+SELECT * FROM subscriptions_history;
+```
+
+Should return something similar to:
+
+name  |     state     |                            sys_period
+----- | ------------- | -------------------------------------------------------------------
+ test1 | inserted      | ["2017-08-01 16:09:45.542983+02","2017-08-01 16:09:54.984179+02")
+ test1 | updated       | ["2017-08-01 16:09:54.984179+02","2017-08-01 16:10:08.880571+02")
+ test1 | updated twice | ["2017-08-01 16:10:08.880571+02","2017-08-01 16:10:17.33659+02")
+ test2 | inserted      | ["1999-12-31 23:59:59+01","1999-12-31 23:59:59.000001+01")
+ test2 | updated       | ["1999-12-31 23:59:59.000001+01","1999-12-31 23:59:59.000002+01")
+ test2 | updated twice | ["1999-12-31 23:59:59.000002+01","1999-12-31 23:59:59.000003+01")
+
 
 <a name="additional-features"></a>
 

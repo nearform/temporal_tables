@@ -2,6 +2,7 @@
 
 createdb temporal_tables_test
 psql temporal_tables_test -q -f versioning_function.sql
+psql temporal_tables_test -q -f system_time_function.sql
 
 mkdir -p test/result
 
@@ -10,7 +11,9 @@ TESTS="
   invalid_system_period_values invalid_system_period invalid_types
   versioning upper_case structure combinations
   different_schema unchanged_values unchanged_version_values
-  non_equality_types non_equality_types_unchanged_values"
+  non_equality_types non_equality_types_unchanged_values
+  set_system_time invalid_set_system_time
+  "
 
 for name in $TESTS; do
   echo ""

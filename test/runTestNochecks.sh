@@ -2,6 +2,7 @@
 
 createdb temporal_tables_test
 psql temporal_tables_test -q -f versioning_function_nochecks.sql
+psql temporal_tables_test -q -f system_time_function.sql
 
 mkdir -p test/result
 
