@@ -1,3 +1,5 @@
+-- version 0.5.0
+
 CREATE OR REPLACE FUNCTION set_system_time(user_timestamp text)
 RETURNS text AS $$
 DECLARE
