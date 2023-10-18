@@ -82,15 +82,6 @@ BEGIN
   END IF;
 
   IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
-    -- Ignore rows already modified in the current transaction
-    IF OLD.xmin::text = (txid_current() % (2^32)::bigint)::text THEN
-      IF TG_OP = 'DELETE' THEN
-        RETURN OLD;
-      END IF;
-
-      RETURN NEW;
-    END IF;
-
     SELECT current_setting('server_version_num')::integer
     INTO pg_version;
 
