@@ -2,15 +2,13 @@
 
 ![](https://github.com/nearform/temporal_tables/workflows/ci/badge.svg)
 
-This is an attempt to rewrite the postgresql [temporal_tables](https://github.com/arkhipov/temporal_tables) extension in PL/pgSQL, without the need for external c extension.
+This rewrite aims to provide a temporal tables solution in PL/pgSQL, targeting AWS RDS, Google Cloud SQL, and Azure Database for PostgreSQL where custom C extensions aren't permitted.
 
-The goal is to be able to use it on AWS RDS and other hosted solutions, where using custom extensions or c functions is not an option.
+The script in `versioning_function.sql` serves as a direct substitute.
 
-The version provided in `versioning_function.sql` is a drop-in replacement.
+For a speedier but riskier option, `versioning_function_nochecks.sql` is 2x faster due to the absence of validation checks.
 
-The version in `versioning_function_nochecks.sql` is similar to the previous one, but all validation checks have been removed. This version is 2x faster than the normal one, but more dangerous and prone to errors.
-
-With time, added some new functionality diverging from the original implementations. New functionalities are however still retro-compatible:
+Over time, new features have been introduced while maintaining backward compatibility:
 
 - [Ignore updates with no actual changes](#ignore-unchanged-values)
 
@@ -26,6 +24,7 @@ psql temporal_test < versioning_function.sql
 ```
 
 If you would like to have `set_system_time` function available (more details [below](#system-time)) you should run the following as well:
+
 ```sh
 psql temporal_test < system_time_function.sql
 ```
@@ -106,14 +105,17 @@ Should return something similar to:
 | test1 | updated twice | ["2017-08-01 16:10:08.880571+02","2017-08-01 16:10:17.33659+02")  |
 
 <a name="system-time"></a>
+
 ## Setting custom system time
+
 If you want to take advantage of setting a custom system time you can use the `set_system_time` function. It is a port of the original [set_system_time](https://github.com/arkhipov/temporal_tables#advanced-usage).
-The function accepts string representation of timestamp in the following format: `YYYY-MM-DD HH:MI:SS.MS.US` - where hours are in 24-hour format 00-23 and the MS (milliseconds) and US (microseconds) portions are optional. 
+The function accepts string representation of timestamp in the following format: `YYYY-MM-DD HH:MI:SS.MS.US` - where hours are in 24-hour format 00-23 and the MS (milliseconds) and US (microseconds) portions are optional.
 Same as the original function, calling it with `null` will reset to default setting (using the CURRENT_TIMESTAMP):
 
 ```sql
 SELECT set_system_time(null);
 ```
+
 Below is an example on how to use this function (continues using the example from above):
 
 Create the set_system_time function:
@@ -123,6 +125,7 @@ psql temporal_test < system_time_function.sql
 ```
 
 Set a custom value for the system time:
+
 ```sql
 SELECT set_system_time('1999-12-31 23:59:59');
 ```
@@ -146,15 +149,14 @@ SELECT * FROM subscriptions_history;
 
 Should return something similar to:
 
-name  |     state     |                            sys_period
------ | ------------- | -------------------------------------------------------------------
- test1 | inserted      | ["2017-08-01 16:09:45.542983+02","2017-08-01 16:09:54.984179+02")
- test1 | updated       | ["2017-08-01 16:09:54.984179+02","2017-08-01 16:10:08.880571+02")
- test1 | updated twice | ["2017-08-01 16:10:08.880571+02","2017-08-01 16:10:17.33659+02")
- test2 | inserted      | ["1999-12-31 23:59:59+01","1999-12-31 23:59:59.000001+01")
- test2 | updated       | ["1999-12-31 23:59:59.000001+01","1999-12-31 23:59:59.000002+01")
- test2 | updated twice | ["1999-12-31 23:59:59.000002+01","1999-12-31 23:59:59.000003+01")
-
+| name  | state         | sys_period                                                        |
+| ----- | ------------- | ----------------------------------------------------------------- |
+| test1 | inserted      | ["2017-08-01 16:09:45.542983+02","2017-08-01 16:09:54.984179+02") |
+| test1 | updated       | ["2017-08-01 16:09:54.984179+02","2017-08-01 16:10:08.880571+02") |
+| test1 | updated twice | ["2017-08-01 16:10:08.880571+02","2017-08-01 16:10:17.33659+02")  |
+| test2 | inserted      | ["1999-12-31 23:59:59+01","1999-12-31 23:59:59.000001+01")        |
+| test2 | updated       | ["1999-12-31 23:59:59.000001+01","1999-12-31 23:59:59.000002+01") |
+| test2 | updated twice | ["1999-12-31 23:59:59.000002+01","1999-12-31 23:59:59.000003+01") |
 
 <a name="additional-features"></a>
 
