@@ -4,7 +4,7 @@
 
 This rewrite aims to provide a temporal tables solution in PL/pgSQL, targeting AWS RDS, Google Cloud SQL, and Azure Database for PostgreSQL where custom C extensions aren't permitted.
 
-The script in versioning_function.sql serves as a direct substitute.
+The script in `versioning_function.sql` serves as a direct substitute.
 
 For a speedier but riskier option, `versioning_function_nochecks.sql` is 2x faster due to the absence of validation checks.
 
