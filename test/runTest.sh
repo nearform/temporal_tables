@@ -12,7 +12,7 @@ TESTS="
   versioning upper_case structure combinations
   different_schema unchanged_values unchanged_version_values
   non_equality_types non_equality_types_unchanged_values
-  set_system_time invalid_set_system_time
+  set_system_time invalid_set_system_time versioning_including_current_version_in_history
   "
 
 for name in $TESTS; do
