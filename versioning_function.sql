@@ -7,6 +7,7 @@ DECLARE
   history_table text;
   manipulate jsonb;
   ignore_unchanged_values bool;
+  include_current_version_in_history bool;
   commonColumns text[];
   time_stamp_to_use timestamptz;
   range_lower timestamptz;
@@ -43,15 +44,16 @@ BEGIN
     MESSAGE = 'function "versioning" must be fired for INSERT or UPDATE or DELETE';
   END IF;
 
-  IF TG_NARGS not in (3,4) THEN
+  IF TG_NARGS not between 3 and 5 THEN
     RAISE INVALID_PARAMETER_VALUE USING
     MESSAGE = 'wrong number of parameters for function "versioning"',
-    HINT = 'expected 3 or 4 parameters but got ' || TG_NARGS;
+    HINT = 'expected 3 to 5 parameters but got ' || TG_NARGS;
   END IF;
 
   sys_period := TG_ARGV[0];
   history_table := TG_ARGV[1];
   ignore_unchanged_values := TG_ARGV[3];
+  include_current_version_in_history := TG_ARGV[4];
 
   IF ignore_unchanged_values AND TG_OP = 'UPDATE' THEN
     IF NEW IS NOT DISTINCT FROM OLD THEN
@@ -81,14 +83,16 @@ BEGIN
     ERRCODE = 'datatype_mismatch';
   END IF;
 
-  IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
+  IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' OR (include_current_version_in_history = 'true' AND TG_OP = 'INSERT') THEN
     -- Ignore rows already modified in the current transaction
-    IF OLD.xmin::text = (txid_current() % (2^32)::bigint)::text THEN
-      IF TG_OP = 'DELETE' THEN
-        RETURN OLD;
-      END IF;
+    IF COALESCE(include_current_version_in_history, 'false') <> 'true' THEN
+      IF OLD.xmin::text = (txid_current() % (2^32)::bigint)::text THEN
+        IF TG_OP = 'DELETE' THEN
+          RETURN OLD;
+        END IF;
 
-      RETURN NEW;
+        RETURN NEW;
+      END IF;
     END IF;
 
     SELECT current_setting('server_version_num')::integer
@@ -112,24 +116,26 @@ BEGIN
       HINT = 'history relation must contain system period column with the same name and data type as the versioned one';
     END IF;
 
-    EXECUTE format('SELECT $1.%I', sys_period) USING OLD INTO existing_range;
+    IF COALESCE(include_current_version_in_history, 'false') <> 'true' THEN
+      EXECUTE format('SELECT $1.%I', sys_period) USING OLD INTO existing_range;
 
-    IF existing_range IS NULL THEN
-      RAISE 'system period column "%" of relation "%" must not be null', sys_period, TG_TABLE_NAME USING
-      ERRCODE = 'null_value_not_allowed';
-    END IF;
+      IF existing_range IS NULL THEN
+        RAISE 'system period column "%" of relation "%" must not be null', sys_period, TG_TABLE_NAME USING
+        ERRCODE = 'null_value_not_allowed';
+      END IF;
 
-    IF isempty(existing_range) OR NOT upper_inf(existing_range) THEN
-      RAISE 'system period column "%" of relation "%" contains invalid value', sys_period, TG_TABLE_NAME USING
-      ERRCODE = 'data_exception',
-      DETAIL = 'valid ranges must be non-empty and unbounded on the high side';
-    END IF;
+      IF isempty(existing_range) OR NOT upper_inf(existing_range) THEN
+        RAISE 'system period column "%" of relation "%" contains invalid value', sys_period, TG_TABLE_NAME USING
+        ERRCODE = 'data_exception',
+        DETAIL = 'valid ranges must be non-empty and unbounded on the high side';
+      END IF;
 
-    IF TG_ARGV[2] = 'true' THEN
-      -- mitigate update conflicts
-      range_lower := lower(existing_range);
-      IF range_lower >= time_stamp_to_use THEN
-        time_stamp_to_use := range_lower + interval '1 microseconds';
+      IF TG_ARGV[2] = 'true' THEN
+        -- mitigate update conflicts
+        range_lower := lower(existing_range);
+        IF range_lower >= time_stamp_to_use THEN
+          time_stamp_to_use := range_lower + interval '1 microseconds';
+        END IF;
       END IF;
     END IF;
 
@@ -192,7 +198,39 @@ BEGIN
         RETURN NEW;
       END IF;
     END IF;
-    EXECUTE ('INSERT INTO ' ||
+    IF include_current_version_in_history = 'true' THEN
+      IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
+        EXECUTE (
+          'UPDATE ' ||
+          history_table ||
+          ' SET ' ||
+          quote_ident(sys_period) ||
+          ' = tstzrange($2, $3, ''[)'')' ||
+          ' WHERE (' ||
+          array_to_string(commonColumns , ',') ||
+          ') = (' ||
+          array_to_string(commonColumns, ',$1.') ||
+          ') AND ' ||
+          quote_ident(sys_period) ||
+          ' = $1.' ||
+          quote_ident(sys_period)
+        )
+          USING OLD, range_lower, time_stamp_to_use;
+      END IF;
+      IF TG_OP = 'UPDATE' OR TG_OP = 'INSERT' THEN
+        EXECUTE ('INSERT INTO ' ||
+          history_table ||
+          '(' ||
+          array_to_string(commonColumns , ',') ||
+          ',' ||
+          quote_ident(sys_period) ||
+          ') VALUES ($1.' ||
+          array_to_string(commonColumns, ',$1.') ||
+          ',tstzrange($2, NULL, ''[)''))')
+          USING NEW, time_stamp_to_use;
+      END IF;
+    ELSE
+      EXECUTE ('INSERT INTO ' ||
       history_table ||
       '(' ||
       array_to_string(commonColumns , ',') ||
@@ -202,6 +240,7 @@ BEGIN
       array_to_string(commonColumns, ',$1.') ||
       ',tstzrange($2, $3, ''[)''))')
        USING OLD, range_lower, time_stamp_to_use;
+    END IF;
   END IF;
 
   IF TG_OP = 'UPDATE' OR TG_OP = 'INSERT' THEN
