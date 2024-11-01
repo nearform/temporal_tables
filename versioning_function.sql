@@ -116,6 +116,7 @@ BEGIN
       HINT = 'history relation must contain system period column with the same name and data type as the versioned one';
     END IF;
 
+    -- If we are not including the current version in the history, we need to check if the current version is valid
     IF include_current_version_in_history <> 'true' THEN
       EXECUTE format('SELECT $1.%I', sys_period) USING OLD INTO existing_range;
 
@@ -198,6 +199,7 @@ BEGIN
         RETURN NEW;
       END IF;
     END IF;
+    -- If we are including the current version in the history and the operation is an update or delete, we need to update the previous version in the history table
     IF include_current_version_in_history = 'true' THEN
       IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
         EXECUTE (
@@ -217,6 +219,7 @@ BEGIN
         )
           USING OLD, range_lower, time_stamp_to_use;
       END IF;
+      -- If we are including the current version in the history and the operation is an insert or update, we need to insert the current version in the history table
       IF TG_OP = 'UPDATE' OR TG_OP = 'INSERT' THEN
         EXECUTE ('INSERT INTO ' ||
           history_table ||
