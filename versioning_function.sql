@@ -52,8 +52,8 @@ BEGIN
 
   sys_period := TG_ARGV[0];
   history_table := TG_ARGV[1];
-  ignore_unchanged_values := TG_ARGV[3];
-  include_current_version_in_history := TG_ARGV[4];
+  ignore_unchanged_values := COALESCE(TG_ARGV[3],'false');
+  include_current_version_in_history := COALESCE(TG_ARGV[4],'false');
 
   IF ignore_unchanged_values AND TG_OP = 'UPDATE' THEN
     IF NEW IS NOT DISTINCT FROM OLD THEN
@@ -85,13 +85,13 @@ BEGIN
 
   IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' OR (include_current_version_in_history = 'true' AND TG_OP = 'INSERT') THEN
     -- Ignore rows already modified in the current transaction
-    IF COALESCE(include_current_version_in_history, 'false') <> 'true' THEN
+    IF include_current_version_in_history <> 'true' THEN
       IF OLD.xmin::text = (txid_current() % (2^32)::bigint)::text THEN
         IF TG_OP = 'DELETE' THEN
           RETURN OLD;
         END IF;
 
-        RETURN NEW;
+          RETURN NEW;
       END IF;
     END IF;
 
@@ -116,7 +116,7 @@ BEGIN
       HINT = 'history relation must contain system period column with the same name and data type as the versioned one';
     END IF;
 
-    IF COALESCE(include_current_version_in_history, 'false') <> 'true' THEN
+    IF include_current_version_in_history <> 'true' THEN
       EXECUTE format('SELECT $1.%I', sys_period) USING OLD INTO existing_range;
 
       IF existing_range IS NULL THEN
