@@ -11,6 +11,7 @@ For a speedier but riskier option, `versioning_function_nochecks.sql` is 2x fast
 Over time, new features have been introduced while maintaining backward compatibility:
 
 - [Ignore updates with no actual changes](#ignore-unchanged-values)
+- [Include the current version in history](#include-current-version-in-history)
 
 <a name="usage"></a>
 
@@ -183,6 +184,43 @@ FOR EACH ROW EXECUTE PROCEDURE versioning(
   'sys_period', 'subscriptions_history', true, true
 );
 ```
+
+
+<a name="include-current-version-in-history"></a>
+
+### Include the current version in history
+
+By default this extension only creates a record in the history table for historical records. This feature enables users to also store the details of the current record in the history table. Simplifying cases when you want a consolidated view of both the current and historical states.
+
+e.g
+
+```sql
+SELECT * FROM t_history WHERE x <@ sys_period;
+```
+when `include_current_version_in_history` is true
+
+as opposed to
+
+``` sql
+SELECT * FROM t WHERE x <@ sys_period
+UNION
+SELECT * FROM t_history WHERE x <@ sys_period;
+```
+when `include_current_version_in_history` is false (or unset)
+
+This is a fith parameter in the extension so all previous parameters need to be specified when using this.
+
+The parameter is set by default to false, set it to true to include current version of records in the history table.
+
+``` sql
+CREATE TRIGGER versioning_trigger
+BEFORE INSERT OR UPDATE OR DELETE ON subscriptions
+FOR EACH ROW EXECUTE PROCEDURE versioning(
+  'sys_period', 'subscriptions_history', true, false, true
+);
+```
+
+
 
 <a name="migrations"></a>
 
