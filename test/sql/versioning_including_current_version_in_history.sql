@@ -33,6 +33,8 @@ SELECT a, "b b", lower(sys_period) = CURRENT_TIMESTAMP FROM versioning ORDER BY 
 
 SELECT a, c, upper(sys_period) = CURRENT_TIMESTAMP FROM versioning_history ORDER BY a, sys_period;
 
+SELECT a, c, lower(sys_period) = CURRENT_TIMESTAMP FROM versioning_history ORDER BY a, sys_period;
+
 SELECT a, "b b" FROM versioning WHERE lower(sys_period) = CURRENT_TIMESTAMP ORDER BY a, sys_period;
 
 COMMIT;
@@ -81,8 +83,6 @@ DELETE FROM versioning;
 SELECT * FROM versioning;
 
 SELECT a, c, upper(sys_period) = CURRENT_TIMESTAMP FROM versioning_history ORDER BY a, sys_period;
-
-SELECT a, "b b" FROM versioning WHERE lower(sys_period) = CURRENT_TIMESTAMP ORDER BY a, sys_period;
 
 END;
 
