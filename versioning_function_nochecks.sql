@@ -7,6 +7,7 @@ DECLARE
   history_table text;
   manipulate jsonb;
   ignore_unchanged_values bool;
+  include_current_version_in_history bool;
   commonColumns text[];
   time_stamp_to_use timestamptz;
   range_lower timestamptz;
@@ -32,7 +33,8 @@ BEGIN
 
   sys_period := TG_ARGV[0];
   history_table := TG_ARGV[1];
-  ignore_unchanged_values := TG_ARGV[3];
+  ignore_unchanged_values := COALESCE(TG_ARGV[3],'false');
+  include_current_version_in_history := COALESCE(TG_ARGV[4],'false');
 
   IF ignore_unchanged_values AND TG_OP = 'UPDATE' THEN
     IF NEW IS NOT DISTINCT FROM OLD THEN
@@ -40,14 +42,16 @@ BEGIN
     END IF;
   END IF;
 
-  IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
-    -- Ignore rows already modified in the current transaction
-    IF OLD.xmin::text = (txid_current() % (2^32)::bigint)::text THEN
-      IF TG_OP = 'DELETE' THEN
-        RETURN OLD;
-      END IF;
+  IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' OR (include_current_version_in_history = 'true' AND TG_OP = 'INSERT') THEN
+    IF include_current_version_in_history <> 'true' THEN
+      -- Ignore rows already modified in the current transaction
+      IF OLD.xmin::text = (txid_current() % (2^32)::bigint)::text THEN
+        IF TG_OP = 'DELETE' THEN
+          RETURN OLD;
+        END IF;
 
-      RETURN NEW;
+        RETURN NEW;
+      END IF;
     END IF;
 
     EXECUTE format('SELECT $1.%I', sys_period) USING OLD INTO existing_range;
@@ -88,7 +92,41 @@ BEGIN
         RETURN NEW;
       END IF;
     END IF;
-    EXECUTE ('INSERT INTO ' ||
+-- If we are including the current version in the history and the operation is an update or delete, we need to update the previous version in the history table
+    IF include_current_version_in_history = 'true' THEN
+      IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
+        EXECUTE (
+          'UPDATE ' ||
+          history_table ||
+          ' SET ' ||
+          quote_ident(sys_period) ||
+          ' = tstzrange($2, $3, ''[)'')' ||
+          ' WHERE (' ||
+          array_to_string(commonColumns , ',') ||
+          ') = (' ||
+          array_to_string(commonColumns, ',$1.') ||
+          ') AND ' ||
+          quote_ident(sys_period) ||
+          ' = $1.' ||
+          quote_ident(sys_period)
+        )
+          USING OLD, range_lower, time_stamp_to_use;
+      END IF;
+      -- If we are including the current version in the history and the operation is an insert or update, we need to insert the current version in the history table
+      IF TG_OP = 'UPDATE' OR TG_OP = 'INSERT' THEN
+        EXECUTE ('INSERT INTO ' ||
+          history_table ||
+          '(' ||
+          array_to_string(commonColumns , ',') ||
+          ',' ||
+          quote_ident(sys_period) ||
+          ') VALUES ($1.' ||
+          array_to_string(commonColumns, ',$1.') ||
+          ',tstzrange($2, NULL, ''[)''))')
+          USING NEW, time_stamp_to_use;
+      END IF;    
+    ELSE
+      EXECUTE ('INSERT INTO ' ||
       history_table ||
       '(' ||
       array_to_string(commonColumns , ',') ||
@@ -98,6 +136,7 @@ BEGIN
       array_to_string(commonColumns, ',$1.') ||
       ',tstzrange($2, $3, ''[)''))')
        USING OLD, range_lower, time_stamp_to_use;
+    END IF;
   END IF;
 
   IF TG_OP = 'UPDATE' OR TG_OP = 'INSERT' THEN

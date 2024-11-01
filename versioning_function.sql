@@ -84,8 +84,8 @@ BEGIN
   END IF;
 
   IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' OR (include_current_version_in_history = 'true' AND TG_OP = 'INSERT') THEN
-    -- Ignore rows already modified in the current transaction
     IF include_current_version_in_history <> 'true' THEN
+      -- Ignore rows already modified in the current transaction
       IF OLD.xmin::text = (txid_current() % (2^32)::bigint)::text THEN
         IF TG_OP = 'DELETE' THEN
           RETURN OLD;
