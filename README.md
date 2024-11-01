@@ -210,7 +210,7 @@ when `include_current_version_in_history` is false (or unset)
 
 This is a fith parameter in the extension so all previous parameters need to be specified when using this.
 
-The paramater is set by default to false, set it to true to include current version of records in the history table.
+The parameter is set by default to false, set it to true to include current version of records in the history table.
 
 ``` sql
 CREATE TRIGGER versioning_trigger
