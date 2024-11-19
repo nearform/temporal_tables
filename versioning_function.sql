@@ -6,6 +6,7 @@ DECLARE
   sys_period text;
   history_table text;
   manipulate jsonb;
+  mitigate_update_conflicts text;
   ignore_unchanged_values bool;
   include_current_version_in_history bool;
   commonColumns text[];
@@ -52,6 +53,7 @@ BEGIN
 
   sys_period := TG_ARGV[0];
   history_table := TG_ARGV[1];
+  mitigate_update_conflicts := TG_ARGV[2];
   ignore_unchanged_values := COALESCE(TG_ARGV[3],'false');
   include_current_version_in_history := COALESCE(TG_ARGV[4],'false');
 
@@ -90,8 +92,7 @@ BEGIN
         IF TG_OP = 'DELETE' THEN
           RETURN OLD;
         END IF;
-
-          RETURN NEW;
+        RETURN NEW;
       END IF;
     END IF;
 
@@ -116,10 +117,10 @@ BEGIN
       HINT = 'history relation must contain system period column with the same name and data type as the versioned one';
     END IF;
 
-    -- If we are not including the current version in the history, we need to check if the current version is valid
-    IF include_current_version_in_history <> 'true' THEN
+    -- If we we are performing an update or delete, we need to check if the current version is valid and optionally mitigate update conflicts
+    IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
       EXECUTE format('SELECT $1.%I', sys_period) USING OLD INTO existing_range;
-
+      
       IF existing_range IS NULL THEN
         RAISE 'system period column "%" of relation "%" must not be null', sys_period, TG_TABLE_NAME USING
         ERRCODE = 'null_value_not_allowed';
@@ -131,12 +132,18 @@ BEGIN
         DETAIL = 'valid ranges must be non-empty and unbounded on the high side';
       END IF;
 
-      IF TG_ARGV[2] = 'true' THEN
+      range_lower := lower(existing_range);
+
+      IF mitigate_update_conflicts = 'true' THEN
         -- mitigate update conflicts
-        range_lower := lower(existing_range);
         IF range_lower >= time_stamp_to_use THEN
           time_stamp_to_use := range_lower + interval '1 microseconds';
         END IF;
+      END IF;
+      IF range_lower >= time_stamp_to_use THEN
+        RAISE 'system period value of relation "%" cannot be set to a valid period because a row that is attempted to modify was also modified by another transaction', TG_TABLE_NAME USING
+        ERRCODE = 'data_exception',
+        DETAIL = 'the start time of the system period is the greater than or equal to the time of the current transaction ';
       END IF;
     END IF;
 

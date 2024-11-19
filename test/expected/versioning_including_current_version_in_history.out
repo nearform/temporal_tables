@@ -5,7 +5,7 @@ INSERT INTO versioning (a, sys_period) VALUES (2, tstzrange('2000-01-01', NULL))
 CREATE TABLE versioning_history (a bigint, c date, sys_period tstzrange);
 CREATE TRIGGER versioning_trigger
 BEFORE INSERT OR UPDATE OR DELETE ON versioning
-FOR EACH ROW EXECUTE PROCEDURE versioning('sys_period', 'versioning_history', false, false, true);
+FOR EACH ROW EXECUTE PROCEDURE versioning('sys_period', 'versioning_history', true, false, true);
 -- Insert.
 BEGIN;
 INSERT INTO versioning (a) VALUES (3);
@@ -52,7 +52,7 @@ SELECT a, c, upper(sys_period) = CURRENT_TIMESTAMP FROM versioning_history ORDER
 SELECT a, c, lower(sys_period) = CURRENT_TIMESTAMP FROM versioning_history ORDER BY a, sys_period;
  a | c | ?column?
 ---+---+----------
- 3 |   | 
+ 3 |   | f
  4 |   | t
 (2 rows)
 
@@ -61,6 +61,13 @@ SELECT a, "b b" FROM versioning WHERE lower(sys_period) = CURRENT_TIMESTAMP ORDE
 ---+-----
  4 |
 (1 row)
+
+SELECT a, c, lower(sys_period) IS NOT NULL FROM versioning_history ORDER BY a, sys_period;
+ a | c | ?column?
+---+---+----------
+ 3 |   | t
+ 4 |   | t
+(2 rows)
 
 COMMIT;
 -- Make sure that the next transaction's CURRENT_TIMESTAMP is different.
@@ -74,7 +81,7 @@ SELECT pg_sleep(0.1);
 BEGIN;
 UPDATE versioning SET a = 5 WHERE a = 4;
 UPDATE versioning SET "b b" = '2012-01-01' WHERE a = 5;
-SELECT a, "b b", lower(sys_period) = CURRENT_TIMESTAMP FROM versioning ORDER BY a, sys_period;
+SELECT a, "b b", lower(sys_period) = CURRENT_TIMESTAMP + interval '1 microseconds' FROM versioning ORDER BY a, sys_period;
  a |    b b     | ?column?
 ---+------------+----------
  1 |            | f
@@ -87,11 +94,20 @@ SELECT a, c, upper(sys_period) = CURRENT_TIMESTAMP FROM versioning_history ORDER
 ---+---+----------
  3 |   | f
  4 |   | t
+ 5 |   | f
+ 5 |   |
+(4 rows)
+
+SELECT a, c, upper(sys_period) = CURRENT_TIMESTAMP + interval '1 microseconds' FROM versioning_history ORDER BY a, sys_period;
+ a | c | ?column?
+---+---+----------
+ 3 |   | f
+ 4 |   | f
  5 |   | t
  5 |   |
 (4 rows)
 
-SELECT a, "b b" FROM versioning WHERE lower(sys_period) = CURRENT_TIMESTAMP ORDER BY a, sys_period;
+SELECT a, "b b" FROM versioning WHERE lower(sys_period) = CURRENT_TIMESTAMP + interval '1 microseconds' ORDER BY a, sys_period;
  a |    b b
 ---+------------
  5 | 2012-01-01
