@@ -6,7 +6,7 @@ DECLARE
   sys_period text;
   history_table text;
   manipulate jsonb;
-  mitigate_update_conflicts bool;
+  mitigate_update_conflicts text;
   ignore_unchanged_values bool;
   include_current_version_in_history bool;
   commonColumns text[];
@@ -34,7 +34,7 @@ BEGIN
 
   sys_period := TG_ARGV[0];
   history_table := TG_ARGV[1];
-  mitigate_update_conflicts := COALESCE(TG_ARGV[2],'false');
+  mitigate_update_conflicts := TG_ARGV[2];
   ignore_unchanged_values := COALESCE(TG_ARGV[3],'false');
   include_current_version_in_history := COALESCE(TG_ARGV[4],'false');
 
