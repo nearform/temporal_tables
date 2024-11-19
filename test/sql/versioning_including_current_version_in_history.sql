@@ -8,7 +8,7 @@ CREATE TABLE versioning_history (a bigint, c date, sys_period tstzrange);
 
 CREATE TRIGGER versioning_trigger
 BEFORE INSERT OR UPDATE OR DELETE ON versioning
-FOR EACH ROW EXECUTE PROCEDURE versioning('sys_period', 'versioning_history', false, false, true);
+FOR EACH ROW EXECUTE PROCEDURE versioning('sys_period', 'versioning_history', true, false, true);
 
 -- Insert.
 BEGIN;
@@ -37,6 +37,8 @@ SELECT a, c, lower(sys_period) = CURRENT_TIMESTAMP FROM versioning_history ORDER
 
 SELECT a, "b b" FROM versioning WHERE lower(sys_period) = CURRENT_TIMESTAMP ORDER BY a, sys_period;
 
+SELECT a, c, lower(sys_period) IS NOT NULL FROM versioning_history ORDER BY a, sys_period;
+
 COMMIT;
 
 -- Make sure that the next transaction's CURRENT_TIMESTAMP is different.
@@ -48,11 +50,13 @@ BEGIN;
 UPDATE versioning SET a = 5 WHERE a = 4;
 UPDATE versioning SET "b b" = '2012-01-01' WHERE a = 5;
 
-SELECT a, "b b", lower(sys_period) = CURRENT_TIMESTAMP FROM versioning ORDER BY a, sys_period;
+SELECT a, "b b", lower(sys_period) = CURRENT_TIMESTAMP + interval '1 microseconds' FROM versioning ORDER BY a, sys_period;
 
 SELECT a, c, upper(sys_period) = CURRENT_TIMESTAMP FROM versioning_history ORDER BY a, sys_period;
 
-SELECT a, "b b" FROM versioning WHERE lower(sys_period) = CURRENT_TIMESTAMP ORDER BY a, sys_period;
+SELECT a, c, upper(sys_period) = CURRENT_TIMESTAMP + interval '1 microseconds' FROM versioning_history ORDER BY a, sys_period;
+
+SELECT a, "b b" FROM versioning WHERE lower(sys_period) = CURRENT_TIMESTAMP + interval '1 microseconds' ORDER BY a, sys_period;
 
 COMMIT;
 
