@@ -17,48 +17,48 @@ SELECT set_system_time('2001-01-01 22:59:59.001.000234');
 
 INSERT INTO versioning (a) VALUES (3);
 
-SELECT * FROM versioning_history;
+SELECT a, "b b", sys_period FROM versioning ORDER BY a, sys_period;
+
+SELECT * FROM versioning_history ORDER BY a, sys_period;
 
 COMMIT;
-
 -- Update.
 BEGIN;
 
+SELECT set_system_time('2001-02-01 22:59:59.001.000234');
+
 UPDATE versioning SET a = 4 WHERE a = 3;
 
-SELECT * FROM versioning_history;
+SELECT a, "b b", sys_period FROM versioning ORDER BY a, sys_period;
+
+SELECT a, c, sys_period FROM versioning_history ORDER BY a, sys_period;
 
 COMMIT;
-
--- Reset system time and do multiple updates.
 BEGIN;
+
+SELECT set_system_time('2001-03-01 22:59:59.001.000234');
 
 UPDATE versioning SET a = 5 WHERE a = 4;
 UPDATE versioning SET "b b" = '2012-01-01' WHERE a = 5;
 
-SELECT * FROM versioning_history;
+SELECT a, "b b", sys_period FROM versioning ORDER BY a, sys_period;
+
+SELECT a, c, sys_period FROM versioning_history ORDER BY a, sys_period;
 
 COMMIT;
 
 -- Delete.
 BEGIN;
 
-SELECT set_system_time('2022-01-11 12:00:00.000.000000');
+SELECT set_system_time('2001-04-01 22:59:59.001.000234');
 
 DELETE FROM versioning WHERE a = 4;
 
-SELECT * FROM versioning_history;
+SELECT a, "b b", sys_period FROM versioning ORDER BY a, sys_period;
 
-END;
+SELECT a, c, sys_period FROM versioning_history ORDER BY a, sys_period;
 
--- Delete.
-BEGIN;
-
-DELETE FROM versioning;
-
-SELECT * FROM versioning_history;
-
-END;
+COMMIT;
 
 DROP TABLE versioning;
 DROP TABLE versioning_history;
