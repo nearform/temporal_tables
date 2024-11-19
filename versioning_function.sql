@@ -140,10 +140,10 @@ BEGIN
           time_stamp_to_use := range_lower + interval '1 microseconds';
         END IF;
       END IF;
-      IF range_lower = time_stamp_to_use THEN
+      IF range_lower >= time_stamp_to_use THEN
         RAISE 'system period value of relation "%" cannot be set to a valid period because a row that is attempted to modify was also modified by another transaction', TG_TABLE_NAME USING
         ERRCODE = 'data_exception',
-        DETAIL = 'the start time of the system period is the same as the start time of the current transaction ';
+        DETAIL = 'the start time of the system period is the greater than or equal to the time of the current transaction ';
       END IF;
     END IF;
 
