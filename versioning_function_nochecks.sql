@@ -6,6 +6,7 @@ DECLARE
   sys_period text;
   history_table text;
   manipulate jsonb;
+  mitigate_update_conflicts bool;
   ignore_unchanged_values bool;
   include_current_version_in_history bool;
   commonColumns text[];
@@ -33,6 +34,7 @@ BEGIN
 
   sys_period := TG_ARGV[0];
   history_table := TG_ARGV[1];
+  mitigate_update_conflicts := COALESCE(TG_ARGV[2],'false');
   ignore_unchanged_values := COALESCE(TG_ARGV[3],'false');
   include_current_version_in_history := COALESCE(TG_ARGV[4],'false');
 
@@ -54,13 +56,16 @@ BEGIN
       END IF;
     END IF;
 
-    EXECUTE format('SELECT $1.%I', sys_period) USING OLD INTO existing_range;
+    IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
+      EXECUTE format('SELECT $1.%I', sys_period) USING OLD INTO existing_range;
 
-    IF TG_ARGV[2] = 'true' THEN
-      -- mitigate update conflicts
       range_lower := lower(existing_range);
-      IF range_lower >= time_stamp_to_use THEN
-        time_stamp_to_use := range_lower + interval '1 microseconds';
+
+      IF mitigate_update_conflicts = 'true' THEN
+      -- mitigate update conflicts
+        IF range_lower >= time_stamp_to_use THEN
+          time_stamp_to_use := range_lower + interval '1 microseconds';
+        END IF;
       END IF;
     END IF;
 
