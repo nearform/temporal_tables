@@ -117,7 +117,7 @@ BEGIN
       HINT = 'history relation must contain system period column with the same name and data type as the versioned one';
     END IF;
 
-    -- If we are not including the current version in the history, we need to check if the current version is valid
+    -- If we we are performing an update or delete, we need to check if the current version is valid and optionally mitigate update conflicts
     IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
       EXECUTE format('SELECT $1.%I', sys_period) USING OLD INTO existing_range;
       

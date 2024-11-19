@@ -56,6 +56,7 @@ BEGIN
       END IF;
     END IF;
 
+    -- If we we are performing an update or delete we might want to optionally mitigate update conflicts
     IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
       EXECUTE format('SELECT $1.%I', sys_period) USING OLD INTO existing_range;
 
