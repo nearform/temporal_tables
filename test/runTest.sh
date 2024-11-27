@@ -1,5 +1,8 @@
 #!/bin/bash
 
+export PGDATESTYLE="Postgres, MDY";
+psql -c "SHOW DateStyle;"
+
 createdb temporal_tables_test
 psql temporal_tables_test -q -f versioning_function.sql
 psql temporal_tables_test -q -f system_time_function.sql
