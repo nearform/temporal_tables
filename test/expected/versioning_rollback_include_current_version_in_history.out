@@ -20,8 +20,8 @@ SELECT * FROM versioning_rollback_history;  -- Expecting 0 rows in history.
 -- Ensure original data is unchanged.
 SELECT * FROM versioning_rollback;  -- Expecting original value a = 1.
  a |    b b     |         sys_period          
----+------------+-----------------------------
- 1 | 2020-01-01 | ["2000-01-01 00:00:00+00",)
+---+------------+-----------------------------------
+ 1 | 01-01-2020 | ["Sat Jan 01 00:00:00 2000 UTC",)
 (1 row)
 
 -- Cleanup
