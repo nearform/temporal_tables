@@ -9,14 +9,7 @@ psql temporal_tables_test -q -f system_time_function.sql
 
 mkdir -p test/result
 
-echo "Downloading remote files"
-
-REMOTE_BASE_PATH="https://raw.githubusercontent.com/arkhipov/temporal_tables/refs/heads/master/"
-REMOTE_SQL_FILE_URL="${REMOTE_BASE_PATH}sql/"
-LOCAL_SQL_PATH="test/remote_sql/"
-REMOTE_OUT_FILE_URL="${REMOTE_BASE_PATH}expected/"
-LOCAL_OUT_PATH="test/remote_expected/"
-LOCAL_RESULT_PATH="test/remote_result/"
+FILES_DIFFERENT=false
 
 REMOTE_TESTS="
   combinations structure versioning
@@ -24,35 +17,13 @@ REMOTE_TESTS="
   no_history_system_period no_history_table no_system_period
   "
 
-mkdir -p $LOCAL_SQL_PATH
-mkdir -p $LOCAL_OUT_PATH
-mkdir -p $LOCAL_RESULT_PATH
+./test/runRemoteTests.sh "$REMOTE_TESTS"
+REMOTE_TESTS_RESULT=$?
 
-REMOTE_FILES_TO_TEST=" "
-for name in $REMOTE_TESTS; do
-  curl -f -o ${LOCAL_SQL_PATH}${name}.sql ${REMOTE_SQL_FILE_URL}${name}.sql
-  SQL_STATUS=$?
-
-  curl -f -o ${LOCAL_OUT_PATH}${name}.out ${REMOTE_OUT_FILE_URL}${name}.out
-  OUT_STATUS=$?
-
-  if [ "$SQL_STATUS" -eq 0 ] && [ "$OUT_STATUS" -eq 0 ];  then
-    echo "Remote files downloaded successfully for ${name}"
-    REMOTE_FILES_TO_TEST="${REMOTE_FILES_TO_TEST}${name} "
-  else
-    echo "Remote files download failed for ${name}"
-  fi
-done
-
-echo $REMOTE_FILES_TO_TEST
-
-for name in $REMOTE_FILES_TO_TEST; do
-  echo ""
-  echo $name
-  echo ""
-  psql temporal_tables_test -X -a -q --set=SHOW_CONTEXT=never < test/remote_sql/$name.sql > test/remote_result/$name.out 2>&1
-  diff -b test/remote_expected/$name.out test/remote_result/$name.out
-done
+if [ "$REMOTE_TESTS_RESULT" -eq 1 ]; then
+  # Atleast one of the remote tests failed.
+  FILES_DIFFERENT=true
+fi
 
 TESTS="
   upper_case different_schema unchanged_values unchanged_version_values
@@ -66,8 +37,17 @@ for name in $TESTS; do
   echo $name
   echo ""
   psql temporal_tables_test -X -a -q --set=SHOW_CONTEXT=never < test/sql/$name.sql > test/result/$name.out 2>&1
-  diff -b test/expected/$name.out test/result/$name.out
+  DIFF_OUTPUT=$(diff -b test/expected/$name.out test/result/$name.out)
+
+  if [ -n "$DIFF_OUTPUT" ]; then
+    # Expected and actual files are different.
+    FILES_DIFFERENT=true
+  fi
 done
 
-
 psql -q -c "drop database temporal_tables_test;"
+
+# Exit with 1 if any of the test case failed.
+if [ "$FILES_DIFFERENT" = true ]; then
+  exit 1
+fi
