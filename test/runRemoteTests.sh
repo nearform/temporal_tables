@@ -42,6 +42,7 @@ for name in $REMOTE_FILES_TO_TEST; do
   echo ""
   psql temporal_tables_test -X -a -q --set=SHOW_CONTEXT=never < test/remote_sql/$name.sql > test/remote_result/$name.out 2>&1
   DIFF_OUTPUT=$(diff -b test/remote_expected/$name.out test/remote_result/$name.out)
+  echo "$DIFF_OUTPUT"
 
   if [ -n "$DIFF_OUTPUT" ]; then
     # Expected and actual files are different.

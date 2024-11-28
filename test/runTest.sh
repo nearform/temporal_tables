@@ -1,7 +1,6 @@
 #!/bin/bash
 
 export PGDATESTYLE="Postgres, MDY";
-psql -c "SHOW DateStyle;"
 
 createdb temporal_tables_test
 psql temporal_tables_test -q -f versioning_function.sql
@@ -38,6 +37,7 @@ for name in $TESTS; do
   echo ""
   psql temporal_tables_test -X -a -q --set=SHOW_CONTEXT=never < test/sql/$name.sql > test/result/$name.out 2>&1
   DIFF_OUTPUT=$(diff -b test/expected/$name.out test/result/$name.out)
+  echo "$DIFF_OUTPUT"
 
   if [ -n "$DIFF_OUTPUT" ]; then
     # Expected and actual files are different.
