@@ -10,11 +10,7 @@ mkdir -p test/result
 
 FILES_DIFFERENT=false
 
-REMOTE_TESTS="
-  combinations structure versioning
-  invalid_system_period invalid_system_period_values invalid_types
-  no_history_system_period no_history_table no_system_period
-  "
+REMOTE_TESTS="combinations structure versioning"
 
 ./test/runRemoteTests.sh "$REMOTE_TESTS"
 REMOTE_TESTS_RESULT=$?
