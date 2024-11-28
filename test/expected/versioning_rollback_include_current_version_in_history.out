@@ -27,3 +27,4 @@ SELECT * FROM versioning_rollback;  -- Expecting original value a = 1.
 -- Cleanup
 DROP TABLE versioning_rollback;
 DROP TABLE versioning_rollback_history;
+
