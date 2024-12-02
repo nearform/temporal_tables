@@ -1,4 +1,4 @@
--- version 0.6.1
+-- version 1.0.0
 
 CREATE OR REPLACE FUNCTION set_system_time(user_timestamp timestamptz)
 RETURNS void AS $$
