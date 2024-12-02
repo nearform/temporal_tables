@@ -14,6 +14,7 @@ REMOTE_TESTS="
   combinations structure versioning
   invalid_system_period invalid_system_period_values invalid_types
   no_history_system_period no_history_table no_system_period
+  versioning_custom_system_time
   "
 
 ./test/runRemoteTests.sh "$REMOTE_TESTS"
@@ -30,6 +31,8 @@ TESTS="
   set_system_time invalid_set_system_time versioning_including_current_version_in_history
   versioning_rollback_include_current_version_in_history noop_update
   "
+
+#TESTS="set_system_time invalid_set_system_time"
 
 for name in $TESTS; do
   echo ""
