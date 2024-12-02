@@ -14,6 +14,7 @@ REMOTE_TESTS="
   combinations structure versioning
   invalid_system_period invalid_system_period_values invalid_types
   no_history_system_period no_history_table no_system_period
+  versioning_custom_system_time
   "
 
 ./test/runRemoteTests.sh "$REMOTE_TESTS"
@@ -27,7 +28,7 @@ fi
 TESTS="
   upper_case different_schema unchanged_values unchanged_version_values
   non_equality_types non_equality_types_unchanged_values
-  set_system_time invalid_set_system_time versioning_including_current_version_in_history
+  set_system_time versioning_including_current_version_in_history
   versioning_rollback_include_current_version_in_history noop_update
   "
 

@@ -110,7 +110,10 @@ Should return something similar to:
 ## Setting custom system time
 
 If you want to take advantage of setting a custom system time you can use the `set_system_time` function. It is a port of the original [set_system_time](https://github.com/arkhipov/temporal_tables#advanced-usage).
-The function accepts string representation of timestamp in the following format: `YYYY-MM-DD HH:MI:SS.MS.US` - where hours are in 24-hour format 00-23 and the MS (milliseconds) and US (microseconds) portions are optional.
+The function accepts a timestamp as input. It also accepts string representation of a timestamp in the following formats.
+- `YYYY-MM-DD HH:MI:SS`
+- `YYYY-MM-DD`
+
 Same as the original function, calling it with `null` will reset to default setting (using the CURRENT_TIMESTAMP):
 
 ```sql
@@ -128,7 +131,7 @@ psql temporal_test < system_time_function.sql
 Set a custom value for the system time:
 
 ```sql
-SELECT set_system_time('1999-12-31 23:59:59');
+SELECT set_system_time('1999-12-31 23:59:59'::timestamptz);
 ```
 
 Now test with some data:
