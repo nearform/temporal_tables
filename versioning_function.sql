@@ -217,7 +217,7 @@ BEGIN
           ' = tstzrange($2, $3, ''[)'')' ||
           ' WHERE (' ||
           array_to_string(commonColumns , ',') ||
-          ') = (' ||
+          ') IS NOT DISTINCT FROM ($1.' ||
           array_to_string(commonColumns, ',$1.') ||
           ') AND ' ||
           quote_ident(sys_period) ||
