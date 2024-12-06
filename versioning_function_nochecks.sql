@@ -1,4 +1,4 @@
--- version 1.0.0
+-- version 1.0.1
 
 CREATE OR REPLACE FUNCTION versioning()
 RETURNS TRIGGER AS $$
