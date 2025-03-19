@@ -1,6 +1,6 @@
 # Temporal Tables
 
-![](https://github.com/nearform/temporal_tables/workflows/ci/badge.svg)
+[![ci](https://github.com/nearform/temporal_tables/actions/workflows/ci.yml/badge.svg)](https://github.com/nearform/temporal_tables/actions/workflows/ci.yml)
 
 This rewrite aims to provide a temporal tables solution in PL/pgSQL, targeting AWS RDS, Google Cloud SQL, and Azure Database for PostgreSQL where custom C extensions aren't permitted.
 
