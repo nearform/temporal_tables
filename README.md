@@ -223,7 +223,100 @@ FOR EACH ROW EXECUTE PROCEDURE versioning(
 );
 ```
 
+### Migrating to include_current_version_in_history
 
+If you're already using temporal tables and want to adopt the `include_current_version_in_history` feature, follow these steps to safely migrate your existing tables without losing historical data.
+
+#### Prerequisites
+
+1. **Maintenance Window**: Schedule a maintenance window when no applications are writing to the tables.
+2. **Backup**: Create a backup of your database before proceeding.
+3. **Latest Version**: Ensure you're running the latest version of the temporal tables functions:
+   ```sql
+   -- Update the versioning function
+   \i versioning_function.sql
+   ```
+
+#### Migration Steps
+
+1. **Identify Versioned Tables**
+   First, identify all your versioned tables:
+   ```sql
+   SELECT DISTINCT trigger_schema, event_object_table 
+   FROM information_schema.triggers 
+   WHERE trigger_name = 'versioning_trigger';
+   ```
+
+2. **Copy Current Records**
+   For each versioned table, copy current records to the history table:
+   ```sql
+   -- Replace table_name with your actual table name
+   INSERT INTO table_name_history 
+   SELECT *, tstzrange(LOWER(sys_period), NULL) 
+   FROM table_name 
+   WHERE NOT EXISTS (
+     SELECT 1 
+     FROM table_name_history 
+     WHERE table_name_history.primary_key = table_name.primary_key
+     AND UPPER(table_name_history.sys_period) IS NULL
+   );
+   ```
+
+3. **Update Triggers**
+   Recreate the versioning trigger with the new parameter:
+   ```sql
+   -- Drop existing trigger
+   DROP TRIGGER IF EXISTS versioning_trigger ON table_name;
+   
+   -- Create new trigger with include_current_version_in_history
+   CREATE TRIGGER versioning_trigger
+   BEFORE INSERT OR UPDATE OR DELETE ON table_name
+   FOR EACH ROW EXECUTE PROCEDURE versioning(
+     'sys_period',
+     'table_name_history',
+     true,  -- enforce timestamps
+     false, -- ignore unchanged values (adjust as needed)
+     true   -- include current version in history
+   );
+   ```
+
+#### Verification
+
+After migration, verify the setup:
+
+```sql
+-- Check if current records exist in history
+SELECT t.*, h.*
+FROM table_name t
+LEFT JOIN table_name_history h ON t.primary_key = h.primary_key
+WHERE UPPER(h.sys_period) IS NULL;
+```
+
+#### Rollback Plan
+
+If issues occur, you can revert to the previous state:
+
+```sql
+-- Recreate trigger without include_current_version_in_history
+CREATE OR REPLACE TRIGGER versioning_trigger
+BEFORE INSERT OR UPDATE OR DELETE ON table_name
+FOR EACH ROW EXECUTE PROCEDURE versioning(
+  'sys_period',
+  'table_name_history',
+  true,  -- enforce timestamps
+  false  -- ignore unchanged values (adjust as needed)
+);
+
+-- Remove current versions from history
+DELETE FROM table_name_history 
+WHERE UPPER(sys_period) IS NULL;
+```
+
+#### Notes
+- The migration process ensures no historical data is lost
+- Existing queries that use UNION to combine current and historical records will continue to work
+- New queries can benefit from simplified syntax by querying just the history table
+- Consider updating application queries to use the new consolidated history view
 
 <a name="migrations"></a>
 
