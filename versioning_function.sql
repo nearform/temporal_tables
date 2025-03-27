@@ -282,15 +282,6 @@ BEGIN
        USING OLD, range_lower, time_stamp_to_use;
     END IF;
 
-    -- Update the sys_period in the current record
-    IF TG_OP = 'UPDATE' OR TG_OP = 'INSERT' THEN
-      NEW.sys_period := tstzrange(time_stamp_to_use, NULL, '[)');
-      RETURN NEW;
-    ELSIF TG_OP = 'DELETE' THEN
-      RETURN OLD;
-    END IF;
-
-    RETURN NULL;
   END IF;
 
   IF TG_OP = 'UPDATE' OR TG_OP = 'INSERT' THEN
