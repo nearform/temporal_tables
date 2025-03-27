@@ -318,6 +318,51 @@ WHERE UPPER(sys_period) IS NULL;
 - New queries can benefit from simplified syntax by querying just the history table
 - Consider updating application queries to use the new consolidated history view
 
+### Automatic Migration Mode
+
+When adopting the `include_current_version_in_history` feature for existing tables, you can use the automatic migration mode to seamlessly populate the history table with current records. This eliminates the need for manual intervention.
+
+The migration mode is enabled by adding a sixth parameter to the versioning trigger:
+
+```sql
+CREATE TRIGGER versioning_trigger
+BEFORE INSERT OR UPDATE OR DELETE ON your_table
+FOR EACH ROW EXECUTE PROCEDURE versioning(
+  'sys_period', 'your_table_history', true, false, true, true
+);
+```
+
+When migration mode is enabled:
+- On the first `UPDATE` or `DELETE` operation for each record, the trigger checks if the current version exists in the history table
+- If the current version is missing, it's automatically inserted into the history table before proceeding with the update/delete
+- This ensures a complete history is maintained without requiring manual data migration
+
+#### Usage Guidelines
+
+1. **When to Use**: Enable migration mode when you want to adopt `include_current_version_in_history` for existing tables that already have data.
+
+2. **How to Use**:
+   ```sql
+   -- Update your existing trigger to include migration mode
+   DROP TRIGGER IF EXISTS versioning_trigger ON your_table;
+   CREATE TRIGGER versioning_trigger
+   BEFORE INSERT OR UPDATE OR DELETE ON your_table
+   FOR EACH ROW EXECUTE PROCEDURE versioning(
+     'sys_period', 'your_table_history', true, false, true, true
+   );
+   ```
+
+3. **Limitations**:
+   - Migration mode only works for `UPDATE` and `DELETE` operations
+   - It only migrates records that are actually modified or deleted
+   - Once a record has been migrated, subsequent operations will follow normal versioning behavior
+
+4. **Best Practices**:
+   - Enable migration mode only when you're ready to adopt `include_current_version_in_history`
+   - Consider running a test migration on a copy of your data first
+   - Monitor the size of your history table during migration
+   - You can disable migration mode after all records have been migrated
+
 <a name="migrations"></a>
 
 ## Migrations
