@@ -10,6 +10,7 @@
     "update-version": "node ./scripts/update-version.js",
     "pretest": "docker run --name temporal-tables-test -e POSTGRES_PASSWORD=password -e POSTGRES_USER=postgres -p 5432:5432 -d postgres:latest && sleep 3 && docker exec temporal-tables-test pg_isready -h localhost -p 5432 -U postgres -t 30",
     "test": "(PGHOST=localhost PGPORT=5432 PGUSER=postgres PGPASSWORD=password make run_test; ret=$?; docker stop temporal-tables-test && docker rm temporal-tables-test; exit $ret)",
+    "test:nochecks": "npm run pretest && (PGHOST=localhost PGPORT=5432 PGUSER=postgres PGPASSWORD=password make run_test_nochecks; ret=$?; docker stop temporal-tables-test && docker rm temporal-tables-test; exit $ret)",
     "cleanup": "docker stop temporal-tables-test || true && docker rm temporal-tables-test || true"
   },
   "keywords": [],

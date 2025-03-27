@@ -237,7 +237,7 @@ BEGIN
     END IF;
 
     -- If we are including the current version in the history and the operation is an update or delete, we need to update the previous version in the history table
-    IF include_current_version_in_history = 'true' AND enable_migration_mode = 'false' THEN
+    IF include_current_version_in_history = 'true' THEN
       IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
         EXECUTE (
           'UPDATE ' ||
@@ -269,7 +269,7 @@ BEGIN
           ',tstzrange($2, NULL, ''[)''))')
           USING NEW, time_stamp_to_use;
       END IF;
-    ELSIF enable_migration_mode = 'false' THEN
+    ELSE
       EXECUTE ('INSERT INTO ' ||
       history_table ||
       '(' ||
