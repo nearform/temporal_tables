@@ -25,6 +25,7 @@ TESTS="
   non_equality_types non_equality_types_unchanged_values
   unchanged_version_values versioning_including_current_version_in_history
   versioning_rollback_include_current_version_in_history noop_update
+  migration_mode
   "
 
 for name in $TESTS; do
