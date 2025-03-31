@@ -92,7 +92,7 @@ BEGIN
       AND history.attname != sys_period;
 
     -- Check if record exists in history table for migration mode
-    IF enable_migration_mode = 'true' AND (TG_OP = 'UPDATE' OR TG_OP = 'DELETE') THEN
+    IF enable_migration_mode = 'true' AND include_current_version_in_history = 'true' AND (TG_OP = 'UPDATE' OR TG_OP = 'DELETE') THEN
       EXECUTE 'SELECT EXISTS (
           SELECT 1 FROM ' || history_table || ' WHERE ROW(' ||
           array_to_string(commonColumns, ',') ||

@@ -223,6 +223,8 @@ FOR EACH ROW EXECUTE PROCEDURE versioning(
 );
 ```
 
+<a name="migration-to-include-current-version-in-history"></a>
+
 ### Migrating to include_current_version_in_history
 
 If you're already using temporal tables and want to adopt the `include_current_version_in_history` feature, follow these steps to safely migrate your existing tables without losing historical data.
@@ -244,7 +246,7 @@ If you're already using temporal tables and want to adopt the `include_current_v
    ```sql
    SELECT DISTINCT trigger_schema, event_object_table 
    FROM information_schema.triggers 
-   WHERE trigger_name = 'versioning_trigger';
+   WHERE trigger_name = 'versioning_trigger'; -- Replace trigger name with the name of the version trigger
    ```
 
 2. **Copy Current Records**
@@ -320,7 +322,7 @@ WHERE UPPER(sys_period) IS NULL;
 
 ### Automatic Migration Mode
 
-When adopting the `include_current_version_in_history` feature for existing tables, you can use the automatic migration mode to seamlessly populate the history table with current records. This eliminates the need for manual intervention.
+When adopting the `include_current_version_in_history` feature for existing tables, you can use the automatic gradual migration mode to seamlessly populate the history table with current records.
 
 The migration mode is enabled by adding a sixth parameter to the versioning trigger:
 
@@ -359,9 +361,11 @@ When migration mode is enabled:
 
 4. **Best Practices**:
    - Enable migration mode only when you're ready to adopt `include_current_version_in_history`
-   - Consider running a test migration on a copy of your data first
+   - Consider running a test migration on a copy of your data first to determine any performance impacts
    - Monitor the size of your history table during migration
    - You can disable migration mode after all records have been migrated
+
+**Note:** The automatic migration happens gradually, filling in missing history only when existing records are updated or deleted. As a result, records that rarely change will still require manual migration using the [method described above](#migration-to-include-current-version-in-history). However, since the most active records will be automatically migrated, the risk of missing important data is greatly reduced, eliminating the need for a dedicated maintenance window.
 
 <a name="migrations"></a>
 
