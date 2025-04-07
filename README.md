@@ -393,7 +393,19 @@ If the column doesn't accept null values you'll need to modify it to allow for n
 
 ## Test
 
-In order to run tests:
+Ensure you have a postgres database available. A database container can be started by running:
+
+```sh
+npm run db:start
+```
+
+In order to run tests
+
+```sh
+npm test
+```
+
+or
 
 ```sh
 make run_test
@@ -408,6 +420,15 @@ make run_test_nochecks
 ```
 
 Obviously, this suite won't run the tests about the error reporting.
+
+**Note:** When running the tests using `make` ensure that the expected environment variables are available
+
+```sh
+PGHOST=localhost
+PGPORT=5432
+PGUSER=postgres
+PGPASSWORD=password
+```
 
 <a name="performance_tests"></a>
 
