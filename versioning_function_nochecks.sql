@@ -9,6 +9,7 @@ DECLARE
   mitigate_update_conflicts text;
   ignore_unchanged_values bool;
   include_current_version_in_history bool;
+  enable_migration_mode bool;
   commonColumns text[];
   time_stamp_to_use timestamptz;
   range_lower timestamptz;
@@ -16,6 +17,7 @@ DECLARE
   newVersion record;
   oldVersion record;
   user_defined_system_time text;
+  record_exists bool;
 BEGIN
   -- set custom system time if exists
   BEGIN
@@ -37,6 +39,7 @@ BEGIN
   mitigate_update_conflicts := TG_ARGV[2];
   ignore_unchanged_values := COALESCE(TG_ARGV[3],'false');
   include_current_version_in_history := COALESCE(TG_ARGV[4],'false');
+  enable_migration_mode := COALESCE(TG_ARGV[5],'false');
 
   IF ignore_unchanged_values AND TG_OP = 'UPDATE' THEN
     IF NEW IS NOT DISTINCT FROM OLD THEN
@@ -87,8 +90,35 @@ BEGIN
       INNER JOIN main
       ON history.attname = main.attname
       AND history.attname != sys_period;
+
+    -- Check if record exists in history table for migration mode
+    IF enable_migration_mode = 'true' AND include_current_version_in_history = 'true' AND (TG_OP = 'UPDATE' OR TG_OP = 'DELETE') THEN
+      EXECUTE 'SELECT EXISTS (
+          SELECT 1 FROM ' || history_table || ' WHERE ROW(' ||
+          array_to_string(commonColumns, ',') ||
+          ') IS NOT DISTINCT FROM ROW($1.' ||
+          array_to_string(commonColumns, ',$1.') ||
+          '))'
+      USING OLD INTO record_exists;
+
+      IF NOT record_exists THEN
+        -- Insert current record into history table with its original range
+        EXECUTE 'INSERT INTO ' ||
+          history_table ||
+          '(' ||
+          array_to_string(commonColumns, ',') ||
+          ',' ||
+          quote_ident(sys_period) ||
+          ') VALUES ($1.' ||
+          array_to_string(commonColumns, ',$1.') ||
+          ',tstzrange($2, $3, ''[)''))'
+        USING OLD, range_lower, time_stamp_to_use;
+      END IF;
+    END IF;
+
     -- skip version if it would be identical to the previous version
-    IF ignore_unchanged_values AND TG_OP = 'UPDATE' AND array_length(commonColumns, 1) > 0 THEN      EXECUTE 'SELECT ROW($1.' || array_to_string(commonColumns , ', $1.') || ')'
+    IF ignore_unchanged_values AND TG_OP = 'UPDATE' AND array_length(commonColumns, 1) > 0 THEN
+      EXECUTE 'SELECT ROW($1.' || array_to_string(commonColumns , ', $1.') || ')'
         USING NEW
         INTO newVersion;
       EXECUTE 'SELECT ROW($1.' || array_to_string(commonColumns , ', $1.') || ')'
@@ -98,7 +128,8 @@ BEGIN
         RETURN NEW;
       END IF;
     END IF;
--- If we are including the current version in the history and the operation is an update or delete, we need to update the previous version in the history table
+
+    -- If we are including the current version in the history and the operation is an update or delete, we need to update the previous version in the history table
     IF include_current_version_in_history = 'true' THEN
       IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
         EXECUTE (

@@ -223,7 +223,149 @@ FOR EACH ROW EXECUTE PROCEDURE versioning(
 );
 ```
 
+<a name="migration-to-include-current-version-in-history"></a>
 
+### Migrating to include_current_version_in_history
+
+If you're already using temporal tables and want to adopt the `include_current_version_in_history` feature, follow these steps to safely migrate your existing tables without losing historical data.
+
+#### Prerequisites
+
+1. **Maintenance Window**: Schedule a maintenance window when no applications are writing to the tables.
+2. **Backup**: Create a backup of your database before proceeding.
+3. **Latest Version**: Ensure you're running the latest version of the temporal tables functions:
+   ```sql
+   -- Update the versioning function
+   \i versioning_function.sql
+   ```
+
+#### Migration Steps
+
+1. **Identify Versioned Tables**
+   First, identify all your versioned tables:
+   ```sql
+   SELECT DISTINCT trigger_schema, event_object_table 
+   FROM information_schema.triggers 
+   WHERE trigger_name = 'versioning_trigger'; -- Replace trigger name with the name of the version trigger
+   ```
+
+2. **Copy Current Records**
+   For each versioned table, copy current records to the history table:
+   ```sql
+   -- Replace table_name with your actual table name
+   INSERT INTO table_name_history 
+   SELECT *, tstzrange(LOWER(sys_period), NULL) 
+   FROM table_name 
+   WHERE NOT EXISTS (
+     SELECT 1 
+     FROM table_name_history 
+     WHERE table_name_history.primary_key = table_name.primary_key
+     AND UPPER(table_name_history.sys_period) IS NULL
+   );
+   ```
+
+3. **Update Triggers**
+   Recreate the versioning trigger with the new parameter:
+   ```sql
+   -- Drop existing trigger
+   DROP TRIGGER IF EXISTS versioning_trigger ON table_name;
+   
+   -- Create new trigger with include_current_version_in_history
+   CREATE TRIGGER versioning_trigger
+   BEFORE INSERT OR UPDATE OR DELETE ON table_name
+   FOR EACH ROW EXECUTE PROCEDURE versioning(
+     'sys_period',
+     'table_name_history',
+     true,  -- enforce timestamps
+     false, -- ignore unchanged values (adjust as needed)
+     true   -- include current version in history
+   );
+   ```
+
+#### Verification
+
+After migration, verify the setup:
+
+```sql
+-- Check if current records exist in history
+SELECT t.*, h.*
+FROM table_name t
+LEFT JOIN table_name_history h ON t.primary_key = h.primary_key
+WHERE UPPER(h.sys_period) IS NULL;
+```
+
+#### Rollback Plan
+
+If issues occur, you can revert to the previous state:
+
+```sql
+-- Recreate trigger without include_current_version_in_history
+CREATE OR REPLACE TRIGGER versioning_trigger
+BEFORE INSERT OR UPDATE OR DELETE ON table_name
+FOR EACH ROW EXECUTE PROCEDURE versioning(
+  'sys_period',
+  'table_name_history',
+  true,  -- enforce timestamps
+  false  -- ignore unchanged values (adjust as needed)
+);
+
+-- Remove current versions from history
+DELETE FROM table_name_history 
+WHERE UPPER(sys_period) IS NULL;
+```
+
+#### Notes
+- The migration process ensures no historical data is lost
+- Existing queries that use UNION to combine current and historical records will continue to work
+- New queries can benefit from simplified syntax by querying just the history table
+- Consider updating application queries to use the new consolidated history view
+
+### Automatic Migration Mode
+
+When adopting the `include_current_version_in_history` feature for existing tables, you can use the automatic gradual migration mode to seamlessly populate the history table with current records.
+
+The migration mode is enabled by adding a sixth parameter to the versioning trigger:
+
+```sql
+CREATE TRIGGER versioning_trigger
+BEFORE INSERT OR UPDATE OR DELETE ON your_table
+FOR EACH ROW EXECUTE PROCEDURE versioning(
+  'sys_period', 'your_table_history', true, false, true, true
+);
+```
+
+When migration mode is enabled:
+- On the first `UPDATE` or `DELETE` operation for each record, the trigger checks if the current version exists in the history table
+- If the current version is missing, it's automatically inserted into the history table before proceeding with the update/delete
+- This ensures a complete history is maintained without requiring manual data migration
+
+#### Usage Guidelines
+
+1. **When to Use**: Enable migration mode when you want to adopt `include_current_version_in_history` for existing tables that already have data.
+
+2. **How to Use**:
+   ```sql
+   -- Update your existing trigger to include migration mode
+   DROP TRIGGER IF EXISTS versioning_trigger ON your_table;
+   CREATE TRIGGER versioning_trigger
+   BEFORE INSERT OR UPDATE OR DELETE ON your_table
+   FOR EACH ROW EXECUTE PROCEDURE versioning(
+     'sys_period', 'your_table_history', true, false, true, true
+   );
+   ```
+
+3. **Limitations**:
+   - Migration mode only works for `UPDATE` and `DELETE` operations
+   - It only migrates records that are actually modified or deleted
+   - Once a record has been migrated, subsequent operations will follow normal versioning behavior
+
+4. **Best Practices**:
+   - Enable migration mode only when you're ready to adopt `include_current_version_in_history`
+   - Consider running a test migration on a copy of your data first to determine any performance impacts
+   - Monitor the size of your history table during migration
+   - You can disable migration mode after all records have been migrated
+
+**Note:** The automatic migration happens gradually, filling in missing history only when existing records are updated or deleted. As a result, records that rarely change will still require manual migration using the [method described above](#migration-to-include-current-version-in-history). However, since the most active records will be automatically migrated, the risk of missing important data is greatly reduced, eliminating the need for a dedicated maintenance window.
 
 <a name="migrations"></a>
 
@@ -251,7 +393,19 @@ If the column doesn't accept null values you'll need to modify it to allow for n
 
 ## Test
 
-In order to run tests:
+Ensure you have a postgres database available. A database container can be started by running:
+
+```sh
+npm run db:start
+```
+
+In order to run tests
+
+```sh
+npm test
+```
+
+or
 
 ```sh
 make run_test
@@ -266,6 +420,15 @@ make run_test_nochecks
 ```
 
 Obviously, this suite won't run the tests about the error reporting.
+
+**Note:** When running the tests using `make` ensure that the expected environment variables are available
+
+```sh
+PGHOST=localhost
+PGPORT=5432
+PGUSER=postgres
+PGPASSWORD=password
+```
 
 <a name="performance_tests"></a>
 
