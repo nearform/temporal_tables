@@ -10,10 +10,13 @@ DECLARE
   ignore_unchanged_values bool;
   include_current_version_in_history bool;
   enable_migration_mode bool;
+  increment_version bool;
+  version_column_name text;
   commonColumns text[];
   time_stamp_to_use timestamptz;
   range_lower timestamptz;
   existing_range tstzrange;
+  existing_version integer;
   holder record;
   holder2 record;
   pg_version integer;
@@ -47,10 +50,10 @@ BEGIN
     MESSAGE = 'function "versioning" must be fired for INSERT or UPDATE or DELETE';
   END IF;
 
-  IF TG_NARGS not between 3 and 6 THEN
+  IF TG_NARGS not between 3 and 8 THEN
     RAISE INVALID_PARAMETER_VALUE USING
     MESSAGE = 'wrong number of parameters for function "versioning"',
-    HINT = 'expected 3 to 6 parameters but got ' || TG_NARGS;
+    HINT = 'expected 3 to 8 parameters but got ' || TG_NARGS;
   END IF;
 
   sys_period := TG_ARGV[0];
@@ -59,6 +62,8 @@ BEGIN
   ignore_unchanged_values := COALESCE(TG_ARGV[3],'false');
   include_current_version_in_history := COALESCE(TG_ARGV[4],'false');
   enable_migration_mode := COALESCE(TG_ARGV[5],'false');
+  increment_version := COALESCE(TG_ARGV[6],'false');
+  version_column_name := COALESCE(TG_ARGV[7],'version');
 
   IF ignore_unchanged_values AND TG_OP = 'UPDATE' THEN
     IF NEW IS NOT DISTINCT FROM OLD THEN
@@ -86,6 +91,19 @@ BEGIN
 
     RAISE 'system period column "%" of relation "%" is not a range but type %', sys_period, TG_TABLE_NAME, format_type(holder.atttypid, null) USING
     ERRCODE = 'datatype_mismatch';
+  END IF;
+
+  -- check version column
+  IF increment_version = 'true' THEN
+    SELECT atttypid INTO holder FROM pg_attribute WHERE attrelid = TG_RELID AND attname = version_column_name AND NOT attisdropped;
+    IF NOT FOUND THEN
+      RAISE 'relation "%" does not contain version column "%"', TG_TABLE_NAME, version_column_name USING
+      ERRCODE = 'undefined_column';
+    END IF;
+    IF holder.atttypid != to_regtype('integer') THEN
+      RAISE 'version column "%" of relation "%" is not an integer', version_column_name, TG_TABLE_NAME USING
+      ERRCODE = 'datatype_mismatch';
+    END IF;
   END IF;
 
   IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' OR (include_current_version_in_history = 'true' AND TG_OP = 'INSERT') THEN
@@ -120,6 +138,14 @@ BEGIN
       HINT = 'history relation must contain system period column with the same name and data type as the versioned one';
     END IF;
 
+    -- check if history table has version column
+    IF increment_version = 'true' THEN
+      IF NOT EXISTS(SELECT * FROM pg_attribute WHERE attrelid = history_table::regclass AND attname = version_column_name AND NOT attisdropped) THEN
+        RAISE 'history relation "%" does not contain version column "%"', history_table, version_column_name USING
+        HINT = 'history relation must contain version column with the same name and data type as the versioned one';
+      END IF;
+    END IF;
+
     -- If we we are performing an update or delete, we need to check if the current version is valid and optionally mitigate update conflicts
     IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
       EXECUTE format('SELECT $1.%I', sys_period) USING OLD INTO existing_range;
@@ -148,6 +174,16 @@ BEGIN
         ERRCODE = 'data_exception',
         DETAIL = 'the start time of the system period is the greater than or equal to the time of the current transaction ';
       END IF;
+
+      IF increment_version = 'true' THEN
+        EXECUTE format('SELECT $1.%I', version_column_name) USING OLD INTO existing_version;
+        IF existing_version IS NULL THEN
+          RAISE 'version column "%" of relation "%" must not be null', version_column_name, TG_TABLE_NAME USING
+          ERRCODE = 'null_value_not_allowed';
+        END IF;
+      END IF;
+    ELSIF TG_OP = 'INSERT' THEN
+      existing_version := 0;
     END IF;
 
     WITH history AS
@@ -198,6 +234,10 @@ BEGIN
       ON history.attname = main.attname
       AND history.attname != sys_period;
 
+    IF increment_version = 'true' THEN
+      commonColumns := array_remove(commonColumns, quote_ident(version_column_name));
+    END IF;
+
     -- Check if record exists in history table for migration mode
     IF enable_migration_mode = 'true' AND include_current_version_in_history = 'true' AND (TG_OP = 'UPDATE' OR TG_OP = 'DELETE') THEN
       EXECUTE 'SELECT EXISTS (
@@ -210,16 +250,31 @@ BEGIN
 
       IF NOT record_exists THEN
         -- Insert current record into history table with its original range
-        EXECUTE 'INSERT INTO ' ||
-          history_table ||
-          '(' ||
-          array_to_string(commonColumns, ',') ||
-          ',' ||
-          quote_ident(sys_period) ||
-          ') VALUES ($1.' ||
-          array_to_string(commonColumns, ',$1.') ||
-          ',tstzrange($2, $3, ''[)''))'
-        USING OLD, range_lower, time_stamp_to_use;
+        IF increment_version = 'true' THEN
+          EXECUTE 'INSERT INTO ' ||
+            history_table ||
+            '(' ||
+            array_to_string(commonColumns, ',') ||
+            ',' ||
+            quote_ident(sys_period) ||
+            ',' ||
+            quote_ident(version_column_name) ||
+            ') VALUES ($1.' ||
+            array_to_string(commonColumns, ',$1.') ||
+            ',tstzrange($2, $3, ''[)''), $4)'
+          USING OLD, range_lower, time_stamp_to_use, existing_version;
+        ELSE
+          EXECUTE 'INSERT INTO ' ||
+            history_table ||
+            '(' ||
+            array_to_string(commonColumns, ',') ||
+            ',' ||
+            quote_ident(sys_period) ||
+            ') VALUES ($1.' ||
+            array_to_string(commonColumns, ',$1.') ||
+            ',tstzrange($2, $3, ''[)''))'
+          USING OLD, range_lower, time_stamp_to_use;
+        END IF;
       END IF;
     END IF;
 
@@ -258,34 +313,68 @@ BEGIN
       END IF;
       -- If we are including the current version in the history and the operation is an insert or update, we need to insert the current version in the history table
       IF TG_OP = 'UPDATE' OR TG_OP = 'INSERT' THEN
-        EXECUTE ('INSERT INTO ' ||
-          history_table ||
-          '(' ||
-          array_to_string(commonColumns , ',') ||
-          ',' ||
-          quote_ident(sys_period) ||
-          ') VALUES ($1.' ||
-          array_to_string(commonColumns, ',$1.') ||
-          ',tstzrange($2, NULL, ''[)''))')
-          USING NEW, time_stamp_to_use;
+        IF increment_version = 'true' THEN
+          EXECUTE ('INSERT INTO ' ||
+            history_table ||
+            '(' ||
+            array_to_string(commonColumns , ',') ||
+            ',' ||
+            quote_ident(sys_period) ||
+            ',' ||
+            quote_ident(version_column_name) ||
+            ') VALUES ($1.' ||
+            array_to_string(commonColumns, ',$1.') ||
+            ',tstzrange($2, NULL, ''[)''), $3)')
+            USING NEW, time_stamp_to_use, existing_version + 1;
+        ELSE
+          EXECUTE ('INSERT INTO ' ||
+            history_table ||
+            '(' ||
+            array_to_string(commonColumns , ',') ||
+            ',' ||
+            quote_ident(sys_period) ||
+            ') VALUES ($1.' ||
+            array_to_string(commonColumns, ',$1.') ||
+            ',tstzrange($2, NULL, ''[)''))')
+            USING NEW, time_stamp_to_use;
+        END IF;
       END IF;
     ELSE
-      EXECUTE ('INSERT INTO ' ||
-      history_table ||
-      '(' ||
-      array_to_string(commonColumns , ',') ||
-      ',' ||
-      quote_ident(sys_period) ||
-      ') VALUES ($1.' ||
-      array_to_string(commonColumns, ',$1.') ||
-      ',tstzrange($2, $3, ''[)''))')
-       USING OLD, range_lower, time_stamp_to_use;
+      IF increment_version = 'true' THEN
+        EXECUTE ('INSERT INTO ' ||
+        history_table ||
+        '(' ||
+        array_to_string(commonColumns , ',') ||
+        ',' ||
+        quote_ident(sys_period) ||
+        ',' ||
+        quote_ident(version_column_name) ||
+        ') VALUES ($1.' ||
+        array_to_string(commonColumns, ',$1.') ||
+        ',tstzrange($2, $3, ''[)''), $4)')
+         USING OLD, range_lower, time_stamp_to_use, existing_version + 1;
+      ELSE
+        EXECUTE ('INSERT INTO ' ||
+        history_table ||
+        '(' ||
+        array_to_string(commonColumns , ',') ||
+        ',' ||
+        quote_ident(sys_period) ||
+        ') VALUES ($1.' ||
+        array_to_string(commonColumns, ',$1.') ||
+        ',tstzrange($2, $3, ''[)''))')
+         USING OLD, range_lower, time_stamp_to_use;
+      END IF;
     END IF;
 
   END IF;
 
   IF TG_OP = 'UPDATE' OR TG_OP = 'INSERT' THEN
     manipulate := jsonb_set('{}'::jsonb, ('{' || sys_period || '}')::text[], to_jsonb(tstzrange(time_stamp_to_use, null, '[)')));
+
+    IF increment_version = 'true' THEN
+      manipulate := jsonb_set(manipulate, ('{' || version_column_name || '}')::text[], to_jsonb(existing_version + 1));
+    END IF;
 
     RETURN jsonb_populate_record(NEW, manipulate);
   END IF;
