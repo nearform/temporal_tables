@@ -59,6 +59,15 @@ Create the history table:
 CREATE TABLE subscriptions_history (LIKE subscriptions);
 ```
 
+To improve performance of the trigger at runtime, include some indexes on the history table:
+
+```sql
+CREATE INDEX ON subscriptions_history (sys_period);
+
+-- If your table has a unique identity column include that as well for indexing
+-- CREATE INDEX ON subscriptions_history (id);
+```
+
 Finally, create the trigger:
 
 ```sql
@@ -72,7 +81,7 @@ FOR EACH ROW EXECUTE PROCEDURE versioning(
 A note on the history table name. Previous versions of this extension quoted and escaped it before usage.
 Starting version 0.4.0 we are not escaping it anymore and users need to provide the escaped version as a parameter to the trigger.
 
-This is consistent with the c version, simplifies the extension code and fixes an issue with upper case names that weren't properly supported.
+This is consistent with the C version, simplifies the extension code and fixes an issue with upper case names that weren't properly supported.
 
 Now test with some data:
 
@@ -111,6 +120,7 @@ Should return something similar to:
 
 If you want to take advantage of setting a custom system time you can use the `set_system_time` function. It is a port of the original [set_system_time](https://github.com/arkhipov/temporal_tables#advanced-usage).
 The function accepts a timestamp as input. It also accepts string representation of a timestamp in the following formats.
+
 - `YYYY-MM-DD HH:MI:SS`
 - `YYYY-MM-DD`
 
@@ -174,11 +184,11 @@ Should return something similar to:
 
 By default this extension creates a record in the history table for every update that occurs in the versioned table, regardless of any change actually happening.
 
-We added a fourth paramater to the trigger to change this behaviour and only record updates that result in an actual change.
+We added a fourth parameter to the trigger to change this behaviour and only record updates that result in an actual change.
 
 It is worth mentioning that before making the change, a check is performed on the source table against the history table, in such a way that if the history table has only a subset of the columns of the source table, and you are performing an update in a column that is not present in this subset (this means the column does not exist in the history table), this extension will NOT add a new record to the history. Then you can have columns in the source table that create no new versions if modified by not including those columns in the history table.
 
-The paramater is set by default to `false`, set it to `true` to stop tracking updates without actual changes:
+The parameter is set by default to `false`, set it to `true` to stop tracking updates without actual changes:
 
 ```sql
 CREATE TRIGGER versioning_trigger
@@ -187,7 +197,6 @@ FOR EACH ROW EXECUTE PROCEDURE versioning(
   'sys_period', 'subscriptions_history', true, true
 );
 ```
-
 
 <a name="include-current-version-in-history"></a>
 
@@ -200,22 +209,24 @@ e.g
 ```sql
 SELECT * FROM t_history WHERE x <@ sys_period;
 ```
+
 when `include_current_version_in_history` is true
 
 as opposed to
 
-``` sql
+```sql
 SELECT * FROM t WHERE x <@ sys_period
 UNION
 SELECT * FROM t_history WHERE x <@ sys_period;
 ```
+
 when `include_current_version_in_history` is false (or unset)
 
-This is a fith parameter in the extension so all previous parameters need to be specified when using this.
+This is a fifth parameter in the extension so all previous parameters need to be specified when using this.
 
 The parameter is set by default to false, set it to true to include current version of records in the history table.
 
-``` sql
+```sql
 CREATE TRIGGER versioning_trigger
 BEFORE INSERT OR UPDATE OR DELETE ON subscriptions
 FOR EACH ROW EXECUTE PROCEDURE versioning(
@@ -243,22 +254,24 @@ If you're already using temporal tables and want to adopt the `include_current_v
 
 1. **Identify Versioned Tables**
    First, identify all your versioned tables:
+
    ```sql
-   SELECT DISTINCT trigger_schema, event_object_table 
-   FROM information_schema.triggers 
+   SELECT DISTINCT trigger_schema, event_object_table
+   FROM information_schema.triggers
    WHERE trigger_name = 'versioning_trigger'; -- Replace trigger name with the name of the version trigger
    ```
 
 2. **Copy Current Records**
    For each versioned table, copy current records to the history table:
+
    ```sql
    -- Replace table_name with your actual table name
-   INSERT INTO table_name_history 
-   SELECT *, tstzrange(LOWER(sys_period), NULL) 
-   FROM table_name 
+   INSERT INTO table_name_history
+   SELECT *, tstzrange(LOWER(sys_period), NULL)
+   FROM table_name
    WHERE NOT EXISTS (
-     SELECT 1 
-     FROM table_name_history 
+     SELECT 1
+     FROM table_name_history
      WHERE table_name_history.primary_key = table_name.primary_key
      AND UPPER(table_name_history.sys_period) IS NULL
    );
@@ -266,10 +279,11 @@ If you're already using temporal tables and want to adopt the `include_current_v
 
 3. **Update Triggers**
    Recreate the versioning trigger with the new parameter:
+
    ```sql
    -- Drop existing trigger
    DROP TRIGGER IF EXISTS versioning_trigger ON table_name;
-   
+
    -- Create new trigger with include_current_version_in_history
    CREATE TRIGGER versioning_trigger
    BEFORE INSERT OR UPDATE OR DELETE ON table_name
@@ -310,11 +324,12 @@ FOR EACH ROW EXECUTE PROCEDURE versioning(
 );
 
 -- Remove current versions from history
-DELETE FROM table_name_history 
+DELETE FROM table_name_history
 WHERE UPPER(sys_period) IS NULL;
 ```
 
 #### Notes
+
 - The migration process ensures no historical data is lost
 - Existing queries that use UNION to combine current and historical records will continue to work
 - New queries can benefit from simplified syntax by querying just the history table
@@ -335,6 +350,7 @@ FOR EACH ROW EXECUTE PROCEDURE versioning(
 ```
 
 When migration mode is enabled:
+
 - On the first `UPDATE` or `DELETE` operation for each record, the trigger checks if the current version exists in the history table
 - If the current version is missing, it's automatically inserted into the history table before proceeding with the update/delete
 - This ensures a complete history is maintained without requiring manual data migration
@@ -344,6 +360,7 @@ When migration mode is enabled:
 1. **When to Use**: Enable migration mode when you want to adopt `include_current_version_in_history` for existing tables that already have data.
 
 2. **How to Use**:
+
    ```sql
    -- Update your existing trigger to include migration mode
    DROP TRIGGER IF EXISTS versioning_trigger ON your_table;
@@ -355,6 +372,7 @@ When migration mode is enabled:
    ```
 
 3. **Limitations**:
+
    - Migration mode only works for `UPDATE` and `DELETE` operations
    - It only migrates records that are actually modified or deleted
    - Once a record has been migrated, subsequent operations will follow normal versioning behavior
@@ -454,13 +472,13 @@ or the original c extension run:
 make performance_test_original
 ```
 
-This required the original extentions to be installed, but will automatically add it to the database.
+This required the original extensions to be installed, but will automatically add it to the database.
 
 On the test machine (my laptop) the complete version is 2x slower than the nochecks versions and 16x slower than the original version.
 
 Two comments about those results:
 
-- original c version makes some use of caching (i.e to share an execution plan), whilst this version doesn't. This is propably accounting for a good chunk of the performance difference. At the moment there's not plan of implementing such caching in this version.
+- original c version makes some use of caching (i.e to share an execution plan), whilst this version doesn't. This is probably accounting for a good chunk of the performance difference. At the moment there's not plan of implementing such caching in this version.
 - The trigger still executes in under 1ms and in production environments the the network latency should be more relevant than the trigger itself.
 
 <a name="the-team"></a>
