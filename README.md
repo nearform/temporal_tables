@@ -369,6 +369,48 @@ When migration mode is enabled:
 
 <a name="migrations"></a>
 
+
+### Autoincrement version number
+
+There is support for autoincrementing a version number whenever values of a row get updated. This may be useful for a few reasons:
+
+* Easier to see how many updates have been made to a row
+* Adding primary keys to the history table. E.g. if the main table has a primary key 'id', it will allow adding a primary key 'id', 'version' to the history table. A lot of ORMs expect a primary key
+
+To achieve this:
+* Add an `int` `version` column (or any other name you prefer) to the base table, e.g.
+   ```sql
+   ALTER TABLE your_table ADD COLUMN version int NOT NULL DEFAULT 1
+   ```
+* Add the same to the history table
+   ```sql
+   ALTER TABLE your_table_history ADD COLUMN version int NOT NULL
+   ```
+* Create the trigger to use the feature
+   ```sql
+   DROP TRIGGER IF EXISTS versioning_trigger ON your_table;
+   CREATE TRIGGER versioning_trigger
+   BEFORE INSERT OR UPDATE OR DELETE ON your_table
+   FOR EACH ROW EXECUTE PROCEDURE versioning(
+     'sys_period', 'your_table_history', false, false, false, false,
+     true, -- turn on increment_version
+     'version' -- version_column_name
+   );
+   ```
+
+After this, if you insert a new row
+```sql
+INSERT INTO your_table (id, value) VALUES ('my_id', 'abc')
+```
+the table will start with the row having the initial version `id=my_id, value=abc, version=1`.
+
+If then, the row gets updated with
+```sql
+UPDATE your_table SET value='def' WHERE id='my_id'
+```
+then the table will reflect incremented version `id=my_id, value=def, version=2`. And correspondingly the history table will have the old version `id=my_id, value=abc, version=1` (or both versions if `include_current_version_in_history` is turned on).
+
+
 ## Migrations
 
 During the life of an application is may be necessary to change the schema of a table. In order for temporal_tables to continue to work properly the same migrations should be applied to the history table as well.
