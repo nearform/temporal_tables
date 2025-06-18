@@ -3,8 +3,8 @@
 export PGDATESTYLE="Postgres, MDY";
 
 createdb temporal_tables_test
-psql temporal_tables_test -q -f versioning_function.sql
-psql temporal_tables_test -q -f system_time_function.sql
+psql -q -f versioning_function.sql temporal_tables_test
+psql -q -f system_time_function.sql temporal_tables_test
 
 mkdir -p test/result
 
@@ -37,7 +37,7 @@ for name in $TESTS; do
   echo ""
   echo $name
   echo ""
-  psql temporal_tables_test -X -a -q --set=SHOW_CONTEXT=never < test/sql/$name.sql > test/result/$name.out 2>&1
+  psql -X -a -q --set=SHOW_CONTEXT=never temporal_tables_test < test/sql/$name.sql > test/result/$name.out 2>&1
   DIFF_OUTPUT=$(diff -b test/expected/$name.out test/result/$name.out)
   echo "$DIFF_OUTPUT"
 

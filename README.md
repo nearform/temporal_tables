@@ -504,3 +504,97 @@ Licensed under [MIT](./LICENSE).
 The test scenarios in test/sql and test/expected have been copied over from the original temporal_tables extension, whose license is [BSD 2-clause](https://github.com/arkhipov/temporal_tables/blob/master/LICENSE)
 
 [![banner](https://raw.githubusercontent.com/nearform/.github/refs/heads/master/assets/os-banner-green.svg)](https://www.nearform.com/contact/?utm_source=open-source&utm_medium=banner&utm_campaign=os-project-pages)
+
+# Static Trigger Code Generation and Event Trigger Usage
+
+## Static Trigger Code Generation
+
+This project now supports generating fully static versioning triggers for your tables. This is useful for environments where you want the trigger logic to be hardcoded for the current table structure, with no dynamic lookups at runtime.
+
+### How to Generate a Static Trigger
+
+1. **Install the code generator function:**
+
+   ```sh
+   psql temporal_test < generate_static_versioning_trigger.sql
+   ```
+
+2. **Generate the static trigger code for your table:**
+
+   ```sql
+   SELECT generate_static_versioning_trigger('subscriptions', 'subscriptions_history', 'sys_period', true, true) AS sql_code \gset
+   \echo :sql_code | psql temporal_test
+   ```
+   This will output and apply the static trigger function and trigger for the `subscriptions` table, using the current schema.
+
+   - The arguments are:
+     - `p_table_name`: The table to version (e.g. 'subscriptions')
+     - `p_history_table`: The history table (e.g. 'subscriptions_history')
+     - `p_sys_period`: The system period column (e.g. 'sys_period')
+     - `p_ignore_unchanged_values`: Only version on actual changes (true/false)
+     - `p_include_current_version_in_history`: Include current version in history (true/false)
+
+3. **Example: Full workflow**
+
+   ```sql
+   CREATE TABLE subscriptions (
+     name text NOT NULL,
+     state text NOT NULL
+   );
+   ALTER TABLE subscriptions ADD COLUMN sys_period tstzrange NOT NULL DEFAULT tstzrange(current_timestamp, null);
+   CREATE TABLE subscriptions_history (LIKE subscriptions);
+   -- Now generate and apply the static trigger:
+   SELECT generate_static_versioning_trigger('subscriptions', 'subscriptions_history', 'sys_period', true, true) AS sql_code \gset
+   \echo :sql_code | psql temporal_test
+   ```
+
+4. **After schema changes:**
+   - If you change the schema of your table or history table, you must re-run the generator to update the static trigger.
+
+## Event Trigger for Automatic Re-rendering
+
+You can set up an event trigger to automatically re-render the static versioning trigger whenever you run an `ALTER TABLE` on your versioned tables.
+
+1. **Install the event trigger function:**
+
+   ```sh
+   psql temporal_test < event_trigger_versioning.sql
+   ```
+
+2. **How it works:**
+   - The event trigger listens for `ALTER TABLE` DDL commands.
+   - When a table is altered, it automatically calls `generate_static_versioning_trigger` for that table (using a naming convention or metadata lookup for the history table and sys_period column).
+   - The static trigger is dropped and recreated for the new schema.
+
+3. **Example:**
+   - Suppose you add a column:
+     ```sql
+     ALTER TABLE subscriptions ADD COLUMN plan text;
+     -- The event trigger will automatically re-render the static versioning trigger for 'subscriptions'.
+     ```
+
+4. **Customizing the event trigger:**
+   - By default, the event trigger assumes the history table is named `<table>_history` and the system period column is `sys_period`.
+   - You can modify the event trigger function to use your own conventions or a metadata table.
+
+## Advanced Usage
+
+- You can generate and review the static SQL before applying it:
+  ```sql
+  SELECT generate_static_versioning_trigger('subscriptions', 'subscriptions_history', 'sys_period', true, true);
+  -- Review the output, then run it manually if desired.
+  ```
+- You can use this approach for any table, just adjust the arguments.
+- If you use migrations, always re-run the generator after schema changes.
+
+## Troubleshooting
+
+- If you see errors about missing columns or mismatched types, ensure your history table matches the structure of your main table (except for columns you intentionally omit).
+- If you change the name of the system period column or history table, update the arguments accordingly.
+
+## See Also
+- [versioning_function.sql](./versioning_function.sql) for the original dynamic trigger logic.
+- [event_trigger_versioning.sql](./event_trigger_versioning.sql) for the event trigger implementation.
+- [generate_static_versioning_trigger.sql](./generate_static_versioning_trigger.sql) for the code generator.
+
+---
