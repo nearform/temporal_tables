@@ -10,6 +10,10 @@ CREATE TABLE IF NOT EXISTS versioning_tables_metadata (
   PRIMARY KEY (table_name, table_schema)
 );
 
+INSERT INTO versioning_tables_metadata (table_name, table_schema)
+VALUES
+  ('public', 'subscriptions'); -- replace with your actual table and schema names
+
 CREATE OR REPLACE FUNCTION rerender_versioning_trigger()
 RETURNS event_trigger AS $$
 DECLARE
@@ -27,6 +31,7 @@ BEGIN
     IF source_table ~ '_history$' THEN
       source_table := SUBSTRING(source_table, 1, LENGTH(source_table) - 8);
     END IF;
+    -- when a versioned table is altered, we need to re-render the trigger
     IF obj.command_tag = 'ALTER TABLE'
     AND EXISTS (
       SELECT
@@ -34,8 +39,9 @@ BEGIN
       WHERE table_name = source_table
       AND table_schema = source_schema
     ) THEN
-      history_table := source_table || '_history'; -- Example convention
-      sys_period := 'sys_period'; -- Example convention
+      -- adjust these defaults to match your versioning setup
+      history_table := source_table || '_history';
+      sys_period := 'sys_period';
       sql := generate_static_versioning_trigger(source_table, history_table, sys_period);
   	  EXECUTE sql;
     END IF;
@@ -44,6 +50,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 DROP EVENT TRIGGER IF EXISTS rerender_versioning_on_alter;
+
 CREATE EVENT TRIGGER rerender_versioning_on_alter
   ON ddl_command_end
   WHEN TAG IN ('ALTER TABLE')

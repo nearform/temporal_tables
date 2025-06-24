@@ -10,7 +10,7 @@
     "db:start": "docker compose up -d",
     "db:stop": "docker compose down",
     "update-version": "node ./scripts/update-version.js",
-    "test": "PGHOST=localhost PGPORT=5432 PGUSER=postgres PGPASSWORD=password make run_test"
+    "test": "cross-env PGHOST=localhost PGPORT=5432 PGUSER=postgres PGPASSWORD=password make run_test"
   },
   "keywords": [],
   "author": "",
@@ -18,5 +18,8 @@
   "bugs": {
     "url": "https://github.com/nearform/temporal_tables/issues"
   },
-  "homepage": "https://github.com/nearform/temporal_tables#readme"
+  "homepage": "https://github.com/nearform/temporal_tables#readme",
+  "devDependencies": {
+    "cross-env": "^7.0.3"
+  }
 }
