@@ -6,7 +6,9 @@ CREATE OR REPLACE FUNCTION generate_static_versioning_trigger(
   p_history_table text,
   p_sys_period text,
   p_ignore_unchanged_values boolean DEFAULT false,
-  p_include_current_version_in_history boolean DEFAULT false
+  p_include_current_version_in_history boolean DEFAULT false,
+  p_mitigate_update_conflicts boolean DEFAULT false,
+  p_enable_migration_mode boolean DEFAULT false
 ) RETURNS text AS $$
 DECLARE
   trigger_func_name text := 'versioning';
@@ -99,6 +101,7 @@ DECLARE
   existing_range tstzrange;
   newVersion record;
   oldVersion record;
+  record_exists bool;
 BEGIN
   -- set custom system time if exists
   BEGIN
@@ -142,8 +145,29 @@ BEGIN
         RAISE 'system period column %% contains invalid value', %2$L;
       END IF;
       range_lower := lower(existing_range);
+      
+      IF %9$L THEN
+        -- mitigate update conflicts
+        IF range_lower >= time_stamp_to_use THEN
+          time_stamp_to_use := range_lower + interval '1 microseconds';
+        END IF;
+      END IF;
       IF range_lower >= time_stamp_to_use THEN
-        time_stamp_to_use := range_lower + interval '1 microseconds';
+        RAISE 'system period value of relation "%%" cannot be set to a valid period because a row that is attempted to modify was also modified by another transaction', TG_TABLE_NAME USING
+        ERRCODE = 'data_exception',
+        DETAIL = 'the start time of the system period is the greater than or equal to the time of the current transaction ';
+      END IF;
+    END IF;
+
+    -- Check if record exists in history table for migration mode
+    IF %10$L AND %6$L AND (TG_OP = 'UPDATE' OR TG_OP = 'DELETE') THEN
+      SELECT EXISTS (
+        SELECT FROM %7$I WHERE ROW(%8$s) IS NOT DISTINCT FROM ROW(%5$s)
+      ) INTO record_exists;
+
+      IF NOT record_exists THEN
+        -- Insert current record into history table with its original range
+        INSERT INTO %7$I (%8$s, %2$I) VALUES (%5$s, tstzrange(range_lower, time_stamp_to_use, '[)'));
       END IF;
     END IF;
 
@@ -176,7 +200,9 @@ $outer$,
   old_row_compare,                      
   p_include_current_version_in_history, 
   p_history_table,                      
-  common_columns                        
+  common_columns,                       
+  p_mitigate_update_conflicts,          
+  p_enable_migration_mode              
 );
 
   trigger_sql := format($t$

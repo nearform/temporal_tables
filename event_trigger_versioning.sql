@@ -23,6 +23,7 @@ BEGIN
   FOR obj IN SELECT * FROM pg_event_trigger_ddl_commands() LOOP
     source_schema := SPLIT_PART(obj.object_identity, '.', 1);
     source_table := SPLIT_PART(obj.object_identity, '.', 2);
+    -- when the source is history, invert to the actual source table
     IF source_table ~ '_history$' THEN
       source_table := SUBSTRING(source_table, 1, LENGTH(source_table) - 8);
     END IF;
