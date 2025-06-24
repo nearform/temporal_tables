@@ -123,16 +123,28 @@ BEGIN
   END IF;
 
   IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' OR (%6$L AND TG_OP = 'INSERT') THEN
-    existing_range := OLD.%2$I;
-    IF existing_range IS NULL THEN
-      RAISE 'system period column %% must not be null', %2$L;
+    IF NOT %6$L THEN
+      -- Ignore rows already modified in the current transaction
+      IF OLD.xmin::TEXT = (txid_current() % (2^32)::BIGINT)::TEXT THEN
+        IF TG_OP = 'DELETE' THEN
+          RETURN OLD;
+        END IF;
+        RETURN NEW;
+      END IF;    
     END IF;
-    IF isempty(existing_range) OR NOT upper_inf(existing_range) THEN
-      RAISE 'system period column %% contains invalid value', %2$L;
-    END IF;
-    range_lower := lower(existing_range);
-    IF range_lower >= time_stamp_to_use THEN
-      time_stamp_to_use := range_lower + interval '1 microseconds';
+    
+    IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
+      existing_range := OLD.%2$I;
+      IF existing_range IS NULL THEN
+        RAISE 'system period column %% must not be null', %2$L;
+      END IF;
+      IF isempty(existing_range) OR NOT upper_inf(existing_range) THEN
+        RAISE 'system period column %% contains invalid value', %2$L;
+      END IF;
+      range_lower := lower(existing_range);
+      IF range_lower >= time_stamp_to_use THEN
+        time_stamp_to_use := range_lower + interval '1 microseconds';
+      END IF;
     END IF;
 
     IF %6$L THEN
