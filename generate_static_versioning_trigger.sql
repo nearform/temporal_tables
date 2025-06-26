@@ -11,8 +11,8 @@ CREATE OR REPLACE FUNCTION generate_static_versioning_trigger(
   p_enable_migration_mode boolean DEFAULT false
 ) RETURNS text AS $$
 DECLARE
-  trigger_func_name text := 'versioning';
-  trigger_name text := 'versioning_trigger';
+  trigger_func_name text := p_table_name || '_versioning';
+  trigger_name text := p_table_name || '_versioning_trigger';
   trigger_sql text;
   func_sql text;
   common_columns text;
@@ -86,10 +86,10 @@ BEGIN
 
   -- Check sys_period type at render time
   IF sys_period_type != 'tstzrange' THEN
-    RAISE 'system period column %% does not have type tstzrange', %2$L;
+    RAISE 'system period column % does not have type tstzrange', sys_period_type;
   END IF;
   IF history_sys_period_type != 'tstzrange' THEN
-    RAISE 'history system period column %% does not have type tstzrange', %2$L;
+    RAISE 'history system period column % does not have type tstzrange', history_sys_period_type;
   END IF;
 
   func_sql := format($outer$
@@ -128,7 +128,7 @@ BEGIN
   IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' OR (%6$L AND TG_OP = 'INSERT') THEN
     IF NOT %6$L THEN
       -- Ignore rows already modified in the current transaction
-      IF OLD.xmin::TEXT = (txid_current() % (2^32)::BIGINT)::TEXT THEN
+      IF OLD.xmin::TEXT = (txid_current() %% (2^32)::BIGINT)::TEXT THEN
         IF TG_OP = 'DELETE' THEN
           RETURN OLD;
         END IF;
