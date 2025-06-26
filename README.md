@@ -380,19 +380,19 @@ There is support for autoincrementing a version number whenever values of a row 
 To achieve this:
 * Add an `int` `version` column (or any other name you prefer) to the base table, e.g.
    ```sql
-   ALTER TABLE your_table ADD COLUMN version int NOT NULL DEFAULT 1
+   ALTER TABLE subscriptions ADD COLUMN version int NOT NULL DEFAULT 1
    ```
 * Add the same to the history table
    ```sql
-   ALTER TABLE your_table_history ADD COLUMN version int NOT NULL
+   ALTER TABLE subscriptions_history ADD COLUMN version int NOT NULL
    ```
 * Create the trigger to use the feature
    ```sql
-   DROP TRIGGER IF EXISTS versioning_trigger ON your_table;
+   DROP TRIGGER IF EXISTS versioning_trigger ON subscriptions;
    CREATE TRIGGER versioning_trigger
-   BEFORE INSERT OR UPDATE OR DELETE ON your_table
+   BEFORE INSERT OR UPDATE OR DELETE ON subscriptions
    FOR EACH ROW EXECUTE PROCEDURE versioning(
-     'sys_period', 'your_table_history', false, false, false, false,
+     'sys_period', 'subscriptions_history', false, false, false, false,
      true, -- turn on increment_version
      'version' -- version_column_name
    );
@@ -400,15 +400,15 @@ To achieve this:
 
 After this, if you insert a new row
 ```sql
-INSERT INTO your_table (id, value) VALUES ('my_id', 'abc')
+INSERT INTO subscriptions (name, state) VALUES ('test1', 'inserted')
 ```
-the table will start with the row having the initial version `id=my_id, value=abc, version=1`.
+the table will start with the row having the initial version `name=test1, state=inserted, version=1`.
 
 If then, the row gets updated with
 ```sql
-UPDATE your_table SET value='def' WHERE id='my_id'
+UPDATE subscriptions SET state='updated' WHERE name='test1'
 ```
-then the table will reflect incremented version `id=my_id, value=def, version=2`. And correspondingly the history table will have the old version `id=my_id, value=abc, version=1` (or both versions if `include_current_version_in_history` is turned on).
+then the table will reflect incremented version `name=test1, state=updated, version=2`. And correspondingly the history table will have the old version `name=test1, state=inserted, version=1` (or both versions if `include_current_version_in_history` is turned on).
 
 
 ## Migrations
