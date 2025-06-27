@@ -58,10 +58,10 @@ async function runTest(testFile: string): Promise<TestResult> {
     console.log(`📋 Running ${testFile}...`)
 
     const testPath: string = join(__dirname, testFile)
-    
+
     // Use the same execution pattern as the working npm scripts
     const nodeArgs: string[] = []
-    
+
     // Check if .env file exists and add --env-file flag
     try {
       const envPath = join(__dirname, '../../.env')
@@ -71,14 +71,14 @@ async function runTest(testFile: string): Promise<TestResult> {
     } catch (error) {
       // .env file doesn't exist, continue without it
     }
-    
+
     nodeArgs.push('--loader', 'ts-node/esm/transpile-only', '--test', testPath)
-    
+
     const child: ChildProcess = spawn('node', nodeArgs, {
       env,
       stdio: 'pipe',
       shell: process.platform === 'win32',
-      cwd: join(__dirname, '../..')  // Run from project root
+      cwd: join(__dirname, '../..') // Run from project root
     })
 
     let stdout: string = ''
