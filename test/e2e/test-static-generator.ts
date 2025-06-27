@@ -1,10 +1,9 @@
 import { deepEqual, deepStrictEqual, ok, rejects, throws } from 'node:assert'
 import { describe, test, before, after, beforeEach } from 'node:test'
-import * as url from 'url';
+import * as url from 'url'
 import { DatabaseHelper } from './db-helper.js'
 
-const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
-
+const __dirname = url.fileURLToPath(new URL('.', import.meta.url))
 
 interface VersioningTestTable {
   a: bigint
@@ -75,8 +74,10 @@ describe('Static Generator E2E Tests', () => {
       `)
 
       ok(triggerResult.rows.length > 0)
-      ok(triggerResult.rows[0].trigger_sql.includes('CREATE OR REPLACE FUNCTION'))
-      
+      ok(
+        triggerResult.rows[0].trigger_sql.includes('CREATE OR REPLACE FUNCTION')
+      )
+
       // Execute the generated trigger
       await db.query(triggerResult.rows[0].trigger_sql)
 
@@ -92,93 +93,95 @@ describe('Static Generator E2E Tests', () => {
       await db.sleep(0.01) // Small delay to ensure timestamp difference
 
       // Insert data
-      await db.executeTransaction([
-        "INSERT INTO versioning (a) VALUES (3)"
-      ])
+      await db.executeTransaction(['INSERT INTO versioning (a) VALUES (3)'])
 
       const afterTimestamp = await db.getCurrentTimestamp()
 
       // Check main table
-      const mainResult = await db.query(`
+      const mainResult = await db.query(
+        `
         SELECT a, "b b", lower(sys_period) >= $1 AND lower(sys_period) <= $2 as timestamp_ok
         FROM versioning 
         WHERE a = 3
         ORDER BY a, sys_period
-      `, [beforeTimestamp, afterTimestamp])
+      `,
+        [beforeTimestamp, afterTimestamp]
+      )
 
       deepStrictEqual(mainResult.rows.length, 1)
       deepStrictEqual(mainResult.rows[0].a, '3')
       ok(mainResult.rows[0].timestamp_ok)
 
       // History table should be empty for INSERT
-      const historyResult = await db.query('SELECT * FROM versioning_history ORDER BY a, sys_period')
+      const historyResult = await db.query(
+        'SELECT * FROM versioning_history ORDER BY a, sys_period'
+      )
       deepStrictEqual(historyResult.rows.length, 0)
     })
 
     test('should handle UPDATE operations correctly', async () => {
       await setupBasicVersioningTable(db)
-      
+
       // Insert initial data
-      await db.executeTransaction([
-        "INSERT INTO versioning (a) VALUES (3)"
-      ])
+      await db.executeTransaction(['INSERT INTO versioning (a) VALUES (3)'])
 
       await db.sleep(0.1) // Ensure timestamp difference
 
       const beforeUpdateTimestamp = await db.getCurrentTimestamp()
-      
+
       // Update data
-      await db.executeTransaction([
-        "UPDATE versioning SET a = 4 WHERE a = 3"
-      ])
+      await db.executeTransaction(['UPDATE versioning SET a = 4 WHERE a = 3'])
 
       const afterUpdateTimestamp = await db.getCurrentTimestamp()
 
       // Check main table has updated value
-      const mainResult = await db.query(`
+      const mainResult = await db.query(
+        `
         SELECT a, "b b", lower(sys_period) >= $1 AND lower(sys_period) <= $2 as timestamp_ok
         FROM versioning 
         ORDER BY a, sys_period
-      `, [beforeUpdateTimestamp, afterUpdateTimestamp])
+      `,
+        [beforeUpdateTimestamp, afterUpdateTimestamp]
+      )
 
       const currentRow = mainResult.rows.find(row => row.a === '4')
       ok(currentRow, 'Updated row should exist in main table')
       ok(currentRow.timestamp_ok, 'Timestamp should be recent')
 
       // Check history table has old value
-      const historyResult = await db.query(`
+      const historyResult = await db.query(
+        `
         SELECT a, c, upper(sys_period) >= $1 AND upper(sys_period) <= $2 as timestamp_ok
         FROM versioning_history 
         ORDER BY a, sys_period
-      `, [beforeUpdateTimestamp, afterUpdateTimestamp])
+      `,
+        [beforeUpdateTimestamp, afterUpdateTimestamp]
+      )
 
       deepStrictEqual(historyResult.rows.length, 1)
       deepStrictEqual(historyResult.rows[0].a, '3')
-      ok(historyResult.rows[0].timestamp_ok, 'History timestamp should be recent')
+      ok(
+        historyResult.rows[0].timestamp_ok,
+        'History timestamp should be recent'
+      )
     })
 
     test('should handle DELETE operations correctly', async () => {
       await setupBasicVersioningTable(db)
-      
+
       // Insert and update to create some history
-      await db.executeTransaction([
-        "INSERT INTO versioning (a) VALUES (3)",
-      ])
-      
+      await db.executeTransaction(['INSERT INTO versioning (a) VALUES (3)'])
+
       await db.sleep(0.1)
-      
-      await db.executeTransaction([
-        "UPDATE versioning SET a = 4 WHERE a = 3"
-      ])
+
+      await db.executeTransaction(['UPDATE versioning SET a = 4 WHERE a = 3'])
 
       await db.sleep(0.1)
 
       const beforeDeleteTimestamp = await db.getCurrentTimestamp()
-      
+
       // Delete data
-      await db.executeTransaction([
-        "DELETE FROM versioning WHERE a = 4"
-      ])
+      await db.executeTransaction(['DELETE FROM versioning WHERE a = 4'])
 
       const afterDeleteTimestamp = await db.getCurrentTimestamp()
 
@@ -187,12 +190,15 @@ describe('Static Generator E2E Tests', () => {
       deepStrictEqual(mainResult.rows.length, 0)
 
       // History table should contain the deleted row
-      const historyResult = await db.query(`
+      const historyResult = await db.query(
+        `
         SELECT a, c, upper(sys_period) >= $1 AND upper(sys_period) <= $2 as recent_delete
         FROM versioning_history 
         WHERE a = 4
         ORDER BY a, sys_period
-      `, [beforeDeleteTimestamp, afterDeleteTimestamp])
+      `,
+        [beforeDeleteTimestamp, afterDeleteTimestamp]
+      )
 
       ok(historyResult.rows.length > 0, 'Deleted row should be in history')
       const deletedRow = historyResult.rows.find(row => row.recent_delete)
@@ -241,24 +247,31 @@ describe('Static Generator E2E Tests', () => {
       ])
 
       // Update with no actual changes
-      await db.executeTransaction([
-        "UPDATE versioning SET b = 2 WHERE a = 2"
-      ])
+      await db.executeTransaction(['UPDATE versioning SET b = 2 WHERE a = 2'])
 
       // History should be empty since no real changes occurred
-      const historyResult = await db.query('SELECT * FROM versioning_history ORDER BY a, sys_period')
-      deepStrictEqual(historyResult.rows.length, 0, 'No history should be created for unchanged values')
+      const historyResult = await db.query(
+        'SELECT * FROM versioning_history ORDER BY a, sys_period'
+      )
+      deepStrictEqual(
+        historyResult.rows.length,
+        0,
+        'No history should be created for unchanged values'
+      )
 
       await db.sleep(0.1)
 
       // Update with actual changes
-      await db.executeTransaction([
-        "UPDATE versioning SET b = 3 WHERE a = 2"
-      ])
+      await db.executeTransaction(['UPDATE versioning SET b = 3 WHERE a = 2'])
 
       // History should now contain the change
-      const historyAfterChange = await db.query('SELECT * FROM versioning_history ORDER BY a, sys_period')
-      ok(historyAfterChange.rows.length > 0, 'History should be created for actual changes')
+      const historyAfterChange = await db.query(
+        'SELECT * FROM versioning_history ORDER BY a, sys_period'
+      )
+      ok(
+        historyAfterChange.rows.length > 0,
+        'History should be created for actual changes'
+      )
     })
 
     test('should include current version in history when configured', async () => {
@@ -292,16 +305,25 @@ describe('Static Generator E2E Tests', () => {
       await db.query(triggerResult.rows[0].trigger_sql)
 
       // Insert data
-      await db.executeTransaction([
-        "INSERT INTO versioning (a) VALUES (1)"
-      ])
+      await db.executeTransaction(['INSERT INTO versioning (a) VALUES (1)'])
 
       // Check that current version is also in history
-      const historyResult = await db.query('SELECT * FROM versioning_history ORDER BY a, sys_period')
-      ok(historyResult.rows.length > 0, 'Current version should be in history table')
+      const historyResult = await db.query(
+        'SELECT * FROM versioning_history ORDER BY a, sys_period'
+      )
+      ok(
+        historyResult.rows.length > 0,
+        'Current version should be in history table'
+      )
 
-      const mainResult = await db.query('SELECT * FROM versioning ORDER BY a, sys_period')
-      deepStrictEqual(mainResult.rows.length, 1, 'Main table should have current version')
+      const mainResult = await db.query(
+        'SELECT * FROM versioning ORDER BY a, sys_period'
+      )
+      deepStrictEqual(
+        mainResult.rows.length,
+        1,
+        'Main table should have current version'
+      )
     })
 
     test('should handle custom system time', async () => {
@@ -312,9 +334,7 @@ describe('Static Generator E2E Tests', () => {
       await db.query(`SET user_defined.system_time = '${customTime}'`)
 
       // Insert data
-      await db.executeTransaction([
-        "INSERT INTO versioning (a) VALUES (100)"
-      ])
+      await db.executeTransaction(['INSERT INTO versioning (a) VALUES (100)'])
 
       // Check that the custom timestamp was used
       const result = await db.query(`
@@ -326,7 +346,7 @@ describe('Static Generator E2E Tests', () => {
       deepStrictEqual(result.rows.length, 1)
       const startTime = new Date(result.rows[0].start_time)
       const expectedTime = new Date(customTime)
-      
+
       // Allow for small differences due to parsing
       const timeDiff = Math.abs(startTime.getTime() - expectedTime.getTime())
       ok(timeDiff < 1000, 'Custom system time should be used')
@@ -404,7 +424,7 @@ describe('Static Generator E2E Tests', () => {
       // Try to insert invalid system period
       await rejects(async () => {
         await db.executeTransaction([
-          "INSERT INTO versioning (a, sys_period) VALUES (1, tstzrange('2023-01-01', '2022-01-01'))"  // Invalid range
+          "INSERT INTO versioning (a, sys_period) VALUES (1, tstzrange('2023-01-01', '2022-01-01'))" // Invalid range
         ])
       })
     })
@@ -455,11 +475,15 @@ describe('Static Generator E2E Tests', () => {
         "UPDATE structure SET d = 'updated' WHERE a = 1"
       ])
 
-      const historyResult = await db.query('SELECT * FROM structure_history ORDER BY a, sys_period')
+      const historyResult = await db.query(
+        'SELECT * FROM structure_history ORDER BY a, sys_period'
+      )
       deepStrictEqual(historyResult.rows.length, 1)
       deepStrictEqual(historyResult.rows[0].d, 'test')
 
-      const mainResult = await db.query('SELECT * FROM structure ORDER BY a, sys_period')
+      const mainResult = await db.query(
+        'SELECT * FROM structure ORDER BY a, sys_period'
+      )
       deepStrictEqual(mainResult.rows.length, 1)
       deepStrictEqual(mainResult.rows[0].d, 'updated')
     })
@@ -499,7 +523,7 @@ describe('Static Generator E2E Tests', () => {
 
       // Test operations
       await db.executeTransaction([
-        "INSERT INTO test_schema.versioning (a) VALUES (1)"
+        'INSERT INTO test_schema.versioning (a) VALUES (1)'
       ])
 
       const result = await db.query('SELECT * FROM test_schema.versioning')
@@ -515,9 +539,7 @@ describe('Static Generator E2E Tests', () => {
       await setupBasicVersioningTable(db)
 
       // Insert initial data
-      await db.executeTransaction([
-        "INSERT INTO versioning (a) VALUES (1)"
-      ])
+      await db.executeTransaction(['INSERT INTO versioning (a) VALUES (1)'])
 
       // Perform multiple rapid updates
       for (let i = 2; i <= 10; i++) {
@@ -533,7 +555,9 @@ describe('Static Generator E2E Tests', () => {
       deepStrictEqual(mainResult.rows[0].a, '10')
 
       // Check history contains all intermediate values
-      const historyResult = await db.query('SELECT * FROM versioning_history ORDER BY a, sys_period')
+      const historyResult = await db.query(
+        'SELECT * FROM versioning_history ORDER BY a, sys_period'
+      )
       deepStrictEqual(historyResult.rows.length, 9) // 9 updates = 9 history records
     })
 
@@ -542,26 +566,24 @@ describe('Static Generator E2E Tests', () => {
 
       // Insert initial data
       await db.executeTransaction([
-        "INSERT INTO versioning (a) VALUES (1)",
-        "INSERT INTO versioning (a) VALUES (2)"
+        'INSERT INTO versioning (a) VALUES (1)',
+        'INSERT INTO versioning (a) VALUES (2)'
       ])
 
       // Simulate concurrent updates (sequential for testing)
       await db.sleep(0.1)
-      
-      await db.executeTransaction([
-        "UPDATE versioning SET a = 10 WHERE a = 1"
-      ])
 
-      await db.executeTransaction([
-        "UPDATE versioning SET a = 20 WHERE a = 2"
-      ])
+      await db.executeTransaction(['UPDATE versioning SET a = 10 WHERE a = 1'])
+
+      await db.executeTransaction(['UPDATE versioning SET a = 20 WHERE a = 2'])
 
       // Verify both updates worked
       const mainResult = await db.query('SELECT * FROM versioning ORDER BY a')
       deepStrictEqual(mainResult.rows.length, 2)
-      
-      const historyResult = await db.query('SELECT * FROM versioning_history ORDER BY a, sys_period')
+
+      const historyResult = await db.query(
+        'SELECT * FROM versioning_history ORDER BY a, sys_period'
+      )
       deepStrictEqual(historyResult.rows.length, 2)
     })
   })
