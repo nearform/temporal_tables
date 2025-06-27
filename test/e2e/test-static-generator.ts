@@ -1,20 +1,6 @@
-import { deepEqual, deepStrictEqual, ok, rejects, throws } from 'node:assert'
+import { deepStrictEqual, ok, rejects } from 'node:assert'
 import { describe, test, before, after, beforeEach } from 'node:test'
-import * as url from 'url'
 import { DatabaseHelper } from './db-helper.js'
-
-const __dirname = url.fileURLToPath(new URL('.', import.meta.url))
-
-interface VersioningTestTable {
-  a: bigint
-  'b b'?: Date
-  d?: string
-  sys_period: string
-}
-
-interface VersioningHistoryTable extends VersioningTestTable {
-  c?: Date
-}
 
 describe('Static Generator E2E Tests', () => {
   let db: DatabaseHelper
@@ -40,7 +26,7 @@ describe('Static Generator E2E Tests', () => {
     await db.query('DROP TABLE IF EXISTS test_table_history CASCADE')
   })
 
-  describe.only('Basic Versioning Functionality', () => {
+  describe('Basic Versioning Functionality', () => {
     test('should create versioned table with static trigger', async () => {
       // Create main table
       await db.query(`
@@ -536,7 +522,7 @@ describe('Static Generator E2E Tests', () => {
 
   describe('Performance and Edge Cases', () => {
     test('should handle multiple rapid updates', async () => {
-      await setupBasicVersioningTable(db)
+      await setupBasicVersioningTable(db, false)
 
       // Insert initial data
       await db.executeTransaction(['INSERT INTO versioning (a) VALUES (1)'])
@@ -562,7 +548,7 @@ describe('Static Generator E2E Tests', () => {
     })
 
     test('should handle concurrent transaction simulation', async () => {
-      await setupBasicVersioningTable(db)
+      await setupBasicVersioningTable(db, false)
 
       // Insert initial data
       await db.executeTransaction([
@@ -590,7 +576,10 @@ describe('Static Generator E2E Tests', () => {
 })
 
 // Helper function to set up basic versioning table
-async function setupBasicVersioningTable(db: DatabaseHelper): Promise<void> {
+async function setupBasicVersioningTable(
+  db: DatabaseHelper,
+  withInitialData: boolean = true
+): Promise<void> {
   await db.query(`
     CREATE TABLE versioning (
       a bigint, 
@@ -608,25 +597,25 @@ async function setupBasicVersioningTable(db: DatabaseHelper): Promise<void> {
   `)
 
   // Insert some initial data
-  await db.query(`
-    INSERT INTO versioning (a, sys_period) VALUES (1, tstzrange('-infinity', NULL))
-  `)
-  await db.query(`
-    INSERT INTO versioning (a, sys_period) VALUES (2, tstzrange('2000-01-01', NULL))
-  `)
+  if (withInitialData) {
+    await db.query(`
+      INSERT INTO versioning (a, "b b", sys_period) VALUES (1, '2000-01-01', tstzrange('-infinity', NULL))
+    `)
+    await db.query(`
+      INSERT INTO versioning (a, "b b", sys_period) VALUES (2, '2000-01-02', tstzrange('2000-01-01', NULL))
+    `)
+  }
 
   // Generate and execute static trigger
-  const triggerResult = await db.query(`
-    SELECT generate_static_versioning_trigger(
-      'versioning',
-      'versioning_history', 
-      'sys_period',
-      false,
-      false,
-      false,
-      false
-    ) as trigger_sql
+  await db.query(`
+    CALL render_versioning_trigger(
+      p_table_name => 'versioning',
+      p_history_table => 'versioning_history', 
+      p_sys_period => 'sys_period',
+      p_ignore_unchanged_values => false,
+      p_include_current_version_in_history => false,
+      p_mitigate_update_conflicts => false,
+      p_enable_migration_mode => false
+    )
   `)
-
-  await db.query(triggerResult.rows[0].trigger_sql)
 }

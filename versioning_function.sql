@@ -30,7 +30,7 @@ BEGIN
     ELSE
       SELECT TO_TIMESTAMP(
           user_defined_system_time,
-          'YYYY-MM-DD HH24:MI:SS.MS.US'
+          'YYYY-MM-DD HH24:MI:SS.US'
       ) INTO time_stamp_to_use;
     END IF;
     EXCEPTION WHEN OTHERS THEN

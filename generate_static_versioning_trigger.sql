@@ -131,7 +131,7 @@ BEGIN
   -- set custom system time if exists
   BEGIN
     SELECT current_setting('user_defined.system_time') INTO STRICT time_stamp_to_use;
-    time_stamp_to_use := TO_TIMESTAMP(time_stamp_to_use::text, 'YYYY-MM-DD HH24:MI:SS.MS.US');
+    time_stamp_to_use := TO_TIMESTAMP(time_stamp_to_use::text, 'YYYY-MM-DD HH24:MI:SS.US');
   EXCEPTION WHEN OTHERS THEN
     time_stamp_to_use := CURRENT_TIMESTAMP;
   END;
