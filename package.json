@@ -13,7 +13,6 @@
     "format": "prettier --config ./.prettierrc --write \"test/**/*.ts\"",
     "update-version": "node ./scripts/update-version.js",
     "test": "make run_test",
-    "test:win": "nmake run_test",
     "test:e2e:event": "node --env-file ./.env --loader ts-node/esm/transpile-only --test test/e2e/test-event-trigger.ts",
     "test:e2e:static": "node --env-file ./.env --loader ts-node/esm/transpile-only --test test/e2e/test-static-generator.ts",
     "test:e2e:legacy": "node --env-file ./.env --loader ts-node/esm/transpile-only --test test/e2e/test-legacy.ts",
