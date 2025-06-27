@@ -11,8 +11,12 @@ CREATE OR REPLACE FUNCTION generate_static_versioning_trigger(
   p_enable_migration_mode boolean DEFAULT false
 ) RETURNS text AS $$
 DECLARE
-  trigger_func_name text := p_table_name || '_versioning';
-  trigger_name text := p_table_name || '_versioning_trigger';
+  table_name text;
+  table_schema text;
+  history_table_name text;
+  history_table_schema text;
+  trigger_func_name text;
+  trigger_name text;
   trigger_sql text;
   func_sql text;
   common_columns text;
@@ -21,6 +25,27 @@ DECLARE
   new_row_compare text;
   old_row_compare text;
 BEGIN
+  IF POSITION('.' IN p_table_name) > 0 THEN
+    table_schema := split_part(p_table_name, '.', 1);
+    table_name := split_part(p_table_name, '.', 2);
+  ELSE
+    table_schema := COALESCE(current_schema, 'public');
+    table_name := p_table_name;
+  END IF;
+  p_table_name := format('%I.%I', table_schema, table_name);
+
+  IF POSITION('.' IN p_history_table) > 0 THEN
+    history_table_schema := split_part(p_history_table, '.', 1);
+    history_table_name := split_part(p_history_table, '.', 2);
+  ELSE
+    history_table_schema := COALESCE(current_schema, 'public');
+    history_table_name := p_history_table;
+  END IF;
+  p_history_table := format('%I.%I', history_table_schema, history_table_name);
+
+  trigger_func_name := table_name || '_versioning';
+  trigger_name := table_name || '_versioning_trigger';
+
   -- Get columns common to both source and history tables, excluding sys_period
   SELECT string_agg(quote_ident(main.attname), ',')
     INTO common_columns
@@ -106,7 +131,7 @@ BEGIN
   -- set custom system time if exists
   BEGIN
     SELECT current_setting('user_defined.system_time') INTO STRICT time_stamp_to_use;
-    time_stamp_to_use := TO_TIMESTAMP(time_stamp_to_use, 'YYYY-MM-DD HH24:MI:SS.MS.US');
+    time_stamp_to_use := TO_TIMESTAMP(time_stamp_to_use::text, 'YYYY-MM-DD HH24:MI:SS.MS.US');
   EXCEPTION WHEN OTHERS THEN
     time_stamp_to_use := CURRENT_TIMESTAMP;
   END;
@@ -141,7 +166,8 @@ BEGIN
       IF existing_range IS NULL THEN
         RAISE 'system period column %% must not be null', %2$L;
       END IF;
-      IF isempty(existing_range) OR NOT upper_inf(existing_range) THEN
+      IF isempty(existing_range) 
+      OR NOT upper_inf(existing_range) THEN
         RAISE 'system period column %% contains invalid value', %2$L;
       END IF;
       range_lower := lower(existing_range);
@@ -162,25 +188,25 @@ BEGIN
     -- Check if record exists in history table for migration mode
     IF %10$L AND %6$L AND (TG_OP = 'UPDATE' OR TG_OP = 'DELETE') THEN
       SELECT EXISTS (
-        SELECT FROM %7$I WHERE ROW(%8$s) IS NOT DISTINCT FROM ROW(%5$s)
+        SELECT FROM %7$s WHERE ROW(%8$s) IS NOT DISTINCT FROM ROW(%5$s)
       ) INTO record_exists;
 
       IF NOT record_exists THEN
         -- Insert current record into history table with its original range
-        INSERT INTO %7$I (%8$s, %2$I) VALUES (%5$s, tstzrange(range_lower, time_stamp_to_use, '[)'));
+        INSERT INTO %7$s (%8$s, %2$I) VALUES (%5$s, tstzrange(range_lower, time_stamp_to_use, '[)'));
       END IF;
     END IF;
 
     IF %6$L THEN
       IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
-        UPDATE %7$I SET %2$I = tstzrange(range_lower, time_stamp_to_use, '[)')
+        UPDATE %7$s SET %2$I = tstzrange(range_lower, time_stamp_to_use, '[)')
         WHERE (%8$s) = (%8$s) AND %2$I = OLD.%2$I;
       END IF;
       IF TG_OP = 'UPDATE' OR TG_OP = 'INSERT' THEN
-        INSERT INTO %7$I (%8$s, %2$I) VALUES (%4$s, tstzrange(time_stamp_to_use, NULL, '[)'));
+        INSERT INTO %7$s (%8$s, %2$I) VALUES (%4$s, tstzrange(time_stamp_to_use, NULL, '[)'));
       END IF;
     ELSE
-      INSERT INTO %7$I (%8$s, %2$I) VALUES (%5$s, tstzrange(range_lower, time_stamp_to_use, '[)'));
+      INSERT INTO %7$s (%8$s, %2$I) VALUES (%5$s, tstzrange(range_lower, time_stamp_to_use, '[)'));
     END IF;
   END IF;
 
@@ -206,10 +232,10 @@ $outer$,
 );
 
   trigger_sql := format($t$
-DROP TRIGGER IF EXISTS %1$I ON %2$I;
+DROP TRIGGER IF EXISTS %1$I ON %2$s;
 CREATE TRIGGER %1$I
-BEFORE INSERT OR UPDATE OR DELETE ON %2$I
-FOR EACH ROW EXECUTE FUNCTION %2$I();
+BEFORE INSERT OR UPDATE OR DELETE ON %2$s
+FOR EACH ROW EXECUTE FUNCTION %3$I();
 $t$,
   trigger_name,     
   p_table_name,     

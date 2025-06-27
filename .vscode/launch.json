@@ -1,0 +1,24 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Test File w/ ts-node",
+      "protocol": "inspector",
+      "runtimeArgs": ["--loader", "ts-node/esm/transpile-only", "--test"],
+      "args": ["${relativeFile}"],
+      "outputCapture": "std",
+      "internalConsoleOptions": "openOnSessionStart",
+      "envFile": "${workspaceRoot}/.env",
+      "skipFiles": [
+        "${workspaceRoot}/../../node_modules/**/*",
+        "<node_internals>/**/*"
+      ],
+      "windows": {
+        "skipFiles": ["C:\\**\\node_modules\\**\\*", "<node_internals>/**/*"]
+      },
+      "disableOptimisticBPs": true
+    }
+  ]
+}

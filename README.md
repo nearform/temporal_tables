@@ -411,6 +411,60 @@ If the column doesn't accept null values you'll need to modify it to allow for n
 
 ## Test
 
+### End-to-End Tests (New)
+
+We've added comprehensive end-to-end tests written in modern TypeScript using Node.js built-in test runner and node-postgres. These tests provide extensive coverage of all temporal table features:
+
+#### Test Coverage
+- **Static Generator Tests**: Full coverage of the static trigger generator functionality
+- **Legacy Function Tests**: Backward compatibility testing with the original versioning function
+- **Event Trigger Tests**: Automatic trigger re-rendering on schema changes
+- **Integration Tests**: Real-world scenarios including e-commerce workflows, schema evolution, and performance testing
+- **Error Handling**: Edge cases, transaction rollbacks, and concurrent modifications
+
+#### Running E2E Tests
+
+1. **Prerequisites**: Ensure you have PostgreSQL running (Docker or local installation)
+
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+
+3. **Start database** (if using Docker):
+   ```bash
+   npm run db:start
+   ```
+
+4. **Run all E2E tests**:
+   ```bash
+   npm run test:e2e
+   ```
+
+5. **Run specific test suites**:
+   ```bash
+   # Static generator tests
+   npm run test:e2e:static
+   
+   # Legacy function tests
+   npm run test:e2e:legacy
+   
+   # Integration tests
+   npm run test:e2e:integration
+   ```
+
+#### Features of E2E Tests
+- **Type-safe**: Written in TypeScript with proper type definitions
+- **Modern**: Uses Node.js built-in test runner (no external dependencies like Jest)
+- **Comprehensive**: Tests all features including advanced options and edge cases
+- **Isolated**: Each test starts with a clean database state
+- **Real-world scenarios**: Includes practical examples like e-commerce order processing
+- **Performance testing**: Bulk operations and concurrent access patterns
+
+See [test/e2e/README.md](test/e2e/README.md) for detailed documentation.
+
+### Traditional Tests
+
 Ensure you have a postgres database available. A database container can be started by running:
 
 ```sh
