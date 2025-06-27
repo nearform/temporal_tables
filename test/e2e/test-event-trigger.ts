@@ -1,9 +1,9 @@
 import { deepStrictEqual, ok, rejects } from 'node:assert'
 import { describe, test, before, after, beforeEach } from 'node:test'
-import * as url from 'url';
+import * as url from 'url'
 import { DatabaseHelper } from './db-helper.js'
 
-const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
+const __dirname = url.fileURLToPath(new URL('.', import.meta.url))
 
 describe('Event Trigger Versioning E2E Tests', () => {
   let db: DatabaseHelper
@@ -25,14 +25,21 @@ describe('Event Trigger Versioning E2E Tests', () => {
     await db.query('DROP TABLE IF EXISTS subscriptions_history CASCADE')
     await db.query('DROP TABLE IF EXISTS users CASCADE')
     await db.query('DROP TABLE IF EXISTS users_history CASCADE')
-    await db.query('DELETE FROM versioning_tables_metadata WHERE table_schema = \'public\'')
+    await db.query(
+      "DELETE FROM versioning_tables_metadata WHERE table_schema = 'public'"
+    )
   })
 
   describe('Event Trigger Setup and Management', () => {
     test('should create versioning metadata table', async () => {
       // Load event trigger functionality
-      const eventTriggerPath = require('path').join(__dirname, '..', '..', 'event_trigger_versioning.sql')
-      
+      const eventTriggerPath = require('path').join(
+        __dirname,
+        '..',
+        '..',
+        'event_trigger_versioning.sql'
+      )
+
       try {
         await db.loadAndExecuteSqlFile(eventTriggerPath)
       } catch (error) {
@@ -51,9 +58,13 @@ describe('Event Trigger Versioning E2E Tests', () => {
 
       // Check table structure
       const structure = await db.getTableStructure('versioning_tables_metadata')
-      const hasTableName = structure.some(col => col.column_name === 'table_name')
-      const hasTableSchema = structure.some(col => col.column_name === 'table_schema')
-      
+      const hasTableName = structure.some(
+        col => col.column_name === 'table_name'
+      )
+      const hasTableSchema = structure.some(
+        col => col.column_name === 'table_schema'
+      )
+
       ok(hasTableName, 'Should have table_name column')
       ok(hasTableSchema, 'Should have table_schema column')
     })
@@ -143,7 +154,7 @@ describe('Event Trigger Versioning E2E Tests', () => {
 
       // Verify trigger was created by testing functionality
       await db.query("INSERT INTO test_table (id, name) VALUES (1, 'test')")
-      
+
       const result = await db.query('SELECT * FROM test_table WHERE id = 1')
       deepStrictEqual(result.rows.length, 1)
       ok(result.rows[0].sys_period, 'sys_period should be set by trigger')
@@ -218,8 +229,10 @@ describe('Event Trigger Versioning E2E Tests', () => {
       `)
 
       // Test initial functionality
-      await db.query("INSERT INTO users (id, email) VALUES (1, 'test@example.com')")
-      
+      await db.query(
+        "INSERT INTO users (id, email) VALUES (1, 'test@example.com')"
+      )
+
       let result = await db.query('SELECT * FROM users WHERE id = 1')
       deepStrictEqual(result.rows.length, 1)
 
@@ -233,8 +246,10 @@ describe('Event Trigger Versioning E2E Tests', () => {
       `)
 
       // Test that versioning still works with new column
-      await db.query("INSERT INTO users (id, email, name) VALUES (2, 'test2@example.com', 'Test User')")
-      
+      await db.query(
+        "INSERT INTO users (id, email, name) VALUES (2, 'test2@example.com', 'Test User')"
+      )
+
       result = await db.query('SELECT * FROM users WHERE id = 2')
       deepStrictEqual(result.rows.length, 1)
       deepStrictEqual(result.rows[0].name, 'Test User')
@@ -243,7 +258,9 @@ describe('Event Trigger Versioning E2E Tests', () => {
       await db.sleep(0.1)
       await db.query("UPDATE users SET name = 'Updated User' WHERE id = 2")
 
-      const historyResult = await db.query('SELECT * FROM users_history WHERE id = 2')
+      const historyResult = await db.query(
+        'SELECT * FROM users_history WHERE id = 2'
+      )
       deepStrictEqual(historyResult.rows.length, 1)
       deepStrictEqual(historyResult.rows[0].name, 'Test User') // Original value in history
     })
@@ -278,11 +295,15 @@ describe('Event Trigger Versioning E2E Tests', () => {
       await db.query(triggerResult.rows[0].trigger_sql)
 
       // Insert test data
-      await db.query("INSERT INTO subscriptions (id, user_id) VALUES (1, 100)")
+      await db.query('INSERT INTO subscriptions (id, user_id) VALUES (1, 100)')
 
       // Add column to both tables
-      await db.query('ALTER TABLE subscriptions ADD COLUMN plan_type text DEFAULT \'basic\'')
-      await db.query('ALTER TABLE subscriptions_history ADD COLUMN plan_type text')
+      await db.query(
+        "ALTER TABLE subscriptions ADD COLUMN plan_type text DEFAULT 'basic'"
+      )
+      await db.query(
+        'ALTER TABLE subscriptions_history ADD COLUMN plan_type text'
+      )
 
       // Re-generate trigger with new schema
       const newTriggerResult = await db.query(`
@@ -296,11 +317,15 @@ describe('Event Trigger Versioning E2E Tests', () => {
       await db.query(newTriggerResult.rows[0].trigger_sql)
 
       // Test that new column is handled correctly
-      await db.query("INSERT INTO subscriptions (id, user_id, plan_type) VALUES (2, 200, 'premium')")
+      await db.query(
+        "INSERT INTO subscriptions (id, user_id, plan_type) VALUES (2, 200, 'premium')"
+      )
 
       await db.sleep(0.1)
 
-      await db.query("UPDATE subscriptions SET plan_type = 'enterprise' WHERE id = 2")
+      await db.query(
+        "UPDATE subscriptions SET plan_type = 'enterprise' WHERE id = 2"
+      )
 
       // Verify history includes new column
       const historyResult = await db.query(`
@@ -353,18 +378,28 @@ describe('Event Trigger Versioning E2E Tests', () => {
       // Insert existing data with historical periods
       const oldTime = '2023-01-01 10:00:00+00'
       const midTime = '2023-06-01 10:00:00+00'
-      
-      await db.query(`
+
+      await db.query(
+        `
         INSERT INTO users (id, email, created_at, sys_period) 
         VALUES (1, 'old@example.com', '2023-01-01', tstzrange($1, $2))
-      `, [oldTime, midTime])
+      `,
+        [oldTime, midTime]
+      )
 
       // Update should handle migration mode
-      await db.query("UPDATE users SET email = 'updated@example.com' WHERE id = 1")
+      await db.query(
+        "UPDATE users SET email = 'updated@example.com' WHERE id = 1"
+      )
 
       // Check that history was created appropriately
-      const historyResult = await db.query('SELECT * FROM users_history WHERE id = 1')
-      ok(historyResult.rows.length > 0, 'History should be created in migration mode')
+      const historyResult = await db.query(
+        'SELECT * FROM users_history WHERE id = 1'
+      )
+      ok(
+        historyResult.rows.length > 0,
+        'History should be created in migration mode'
+      )
 
       const mainResult = await db.query('SELECT * FROM users WHERE id = 1')
       deepStrictEqual(mainResult.rows.length, 1)
@@ -490,9 +525,11 @@ describe('Event Trigger Versioning E2E Tests', () => {
       `)
 
       // Verify complex types are preserved in history
-      const historyResult = await db.query('SELECT * FROM complex_table_history WHERE id = 1')
+      const historyResult = await db.query(
+        'SELECT * FROM complex_table_history WHERE id = 1'
+      )
       deepStrictEqual(historyResult.rows.length, 1)
-      
+
       const historyRow = historyResult.rows[0]
       ok(historyRow.metadata, 'JSON metadata should be preserved')
       ok(historyRow.tags, 'Array should be preserved')

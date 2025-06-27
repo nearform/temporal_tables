@@ -1,10 +1,9 @@
 import { deepStrictEqual, ok, rejects } from 'node:assert'
 import { describe, test, before, after, beforeEach } from 'node:test'
-import * as url from 'url';
+import * as url from 'url'
 import { DatabaseHelper } from './db-helper.js'
 
-const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
-
+const __dirname = url.fileURLToPath(new URL('.', import.meta.url))
 
 describe('Integration Tests - All Features', () => {
   let db: DatabaseHelper
@@ -23,20 +22,22 @@ describe('Integration Tests - All Features', () => {
   beforeEach(async () => {
     // Clean up all test tables
     const tables = [
-      'users', 'users_history',
-      'orders', 'orders_history', 
-      'products', 'products_history',
-      'complex_scenario', 'complex_scenario_history',
-      'migration_test', 'migration_test_history',
-      'performance_test', 'performance_test_history'
+      'users',
+      'users_history',
+      'orders',
+      'orders_history',
+      'products',
+      'products_history',
+      'complex_scenario',
+      'complex_scenario_history',
+      'migration_test',
+      'migration_test_history',
+      'performance_test',
+      'performance_test_history'
     ]
-    
-    for (const table of tables) {
+
+    for (const table of tables)
       await db.query(`DROP TABLE IF EXISTS ${table} CASCADE`)
-    }
-    
-    // Clean metadata
-    await db.query('DELETE FROM versioning_tables_metadata WHERE table_schema = \'public\'')
   })
 
   describe('Real-world Scenario Testing', () => {
@@ -155,17 +156,24 @@ describe('Integration Tests - All Features', () => {
       deepStrictEqual(currentOrder.rows[0].status, 'delivered')
 
       // Verify history tracking
-      const userHistory = await db.query('SELECT * FROM users_history WHERE id = 1 ORDER BY sys_period')
+      const userHistory = await db.query(
+        'SELECT * FROM users_history WHERE id = 1 ORDER BY sys_period'
+      )
       deepStrictEqual(userHistory.rows.length, 1)
       deepStrictEqual(userHistory.rows[0].name, 'John Doe') // Original name
 
-      const orderHistory = await db.query('SELECT * FROM orders_history WHERE id = 100 ORDER BY sys_period')
+      const orderHistory = await db.query(
+        'SELECT * FROM orders_history WHERE id = 100 ORDER BY sys_period'
+      )
       ok(orderHistory.rows.length >= 3, 'Should have history of status changes')
 
       // Verify we can track order status progression
       const statusProgression = orderHistory.rows.map(row => row.status)
       ok(statusProgression.includes('pending'), 'Should include pending status')
-      ok(statusProgression.includes('processing'), 'Should include processing status')
+      ok(
+        statusProgression.includes('processing'),
+        'Should include processing status'
+      )
       ok(statusProgression.includes('shipped'), 'Should include shipped status')
     })
 
@@ -209,7 +217,9 @@ describe('Integration Tests - All Features', () => {
       await db.sleep(0.1)
 
       // First schema evolution: add category
-      await db.query('ALTER TABLE products ADD COLUMN category text DEFAULT \'uncategorized\'')
+      await db.query(
+        "ALTER TABLE products ADD COLUMN category text DEFAULT 'uncategorized'"
+      )
       await db.query('ALTER TABLE products_history ADD COLUMN category text')
 
       // Regenerate trigger for new schema
@@ -256,16 +266,25 @@ describe('Integration Tests - All Features', () => {
       ])
 
       // Verify current state includes all columns
-      const currentProducts = await db.query('SELECT * FROM products ORDER BY id')
+      const currentProducts = await db.query(
+        'SELECT * FROM products ORDER BY id'
+      )
       deepStrictEqual(currentProducts.rows.length, 3)
-      ok(currentProducts.rows[2].description.includes('Ultimate'), 'Should have updated description')
+      ok(
+        currentProducts.rows[2].description.includes('Ultimate'),
+        'Should have updated description'
+      )
 
       // Verify history preservation across schema changes
-      const productHistory = await db.query('SELECT * FROM products_history ORDER BY id, sys_period')
+      const productHistory = await db.query(
+        'SELECT * FROM products_history ORDER BY id, sys_period'
+      )
       ok(productHistory.rows.length >= 2, 'Should have history records')
 
       // Verify we can query historical data even after schema changes
-      const originalProduct1 = productHistory.rows.find(row => row.id === '1' && parseFloat(row.price) === 19.99)
+      const originalProduct1 = productHistory.rows.find(
+        row => row.id === '1' && parseFloat(row.price) === 19.99
+      )
       ok(originalProduct1, 'Should preserve original price in history')
     })
   })
@@ -318,14 +337,16 @@ describe('Integration Tests - All Features', () => {
       console.log(`Bulk insert time: ${insertTime}ms`)
 
       // Verify all records inserted
-      const insertResult = await db.query('SELECT COUNT(*) as count FROM performance_test')
+      const insertResult = await db.query(
+        'SELECT COUNT(*) as count FROM performance_test'
+      )
       deepStrictEqual(parseInt(insertResult.rows[0].count), 100)
 
       await db.sleep(0.1)
 
       // Bulk update
       const updateStartTime = Date.now()
-      
+
       const updatePromises = []
       for (let i = 1; i <= 100; i++) {
         updatePromises.push(
@@ -341,7 +362,9 @@ describe('Integration Tests - All Features', () => {
       console.log(`Bulk update time: ${updateTime}ms`)
 
       // Verify history was created
-      const historyResult = await db.query('SELECT COUNT(*) as count FROM performance_test_history')
+      const historyResult = await db.query(
+        'SELECT COUNT(*) as count FROM performance_test_history'
+      )
       deepStrictEqual(parseInt(historyResult.rows[0].count), 100)
 
       // Performance assertion (should complete within reasonable time)
@@ -378,7 +401,7 @@ describe('Integration Tests - All Features', () => {
 
       // Insert initial record
       await db.executeTransaction([
-        "INSERT INTO rapid_test (id, value) VALUES (1, 0)"
+        'INSERT INTO rapid_test (id, value) VALUES (1, 0)'
       ])
 
       // Perform rapid sequential updates
@@ -390,11 +413,15 @@ describe('Integration Tests - All Features', () => {
       }
 
       // Verify final state
-      const finalResult = await db.query('SELECT * FROM rapid_test WHERE id = 1')
+      const finalResult = await db.query(
+        'SELECT * FROM rapid_test WHERE id = 1'
+      )
       deepStrictEqual(parseInt(finalResult.rows[0].value), 50)
 
       // Verify all intermediate states were captured
-      const historyResult = await db.query('SELECT COUNT(*) as count FROM rapid_test_history WHERE id = 1')
+      const historyResult = await db.query(
+        'SELECT COUNT(*) as count FROM rapid_test_history WHERE id = 1'
+      )
       deepStrictEqual(parseInt(historyResult.rows[0].count), 50) // All 50 updates should create history
 
       // Verify history contains sequential values
@@ -437,18 +464,24 @@ describe('Integration Tests - All Features', () => {
       const midTime = '2023-06-01 10:00:00+00'
       const currentTime = '2023-12-01 10:00:00+00'
 
-      await db.query(`
+      await db.query(
+        `
         INSERT INTO migration_test (id, status, updated_at, sys_period)
         VALUES (1, 'active', '2023-01-01', tstzrange($1, NULL))
-      `, [currentTime])
+      `,
+        [currentTime]
+      )
 
       // Insert existing history
-      await db.query(`
+      await db.query(
+        `
         INSERT INTO migration_test_history (id, status, updated_at, sys_period)
         VALUES 
           (1, 'pending', '2023-01-01', tstzrange($1, $2)),
           (1, 'processing', '2023-03-01', tstzrange($2, $3))
-      `, [baseTime, midTime, currentTime])
+      `,
+        [baseTime, midTime, currentTime]
+      )
 
       // Set up versioning with migration mode
       const triggerResult = await db.query(`
@@ -471,7 +504,9 @@ describe('Integration Tests - All Features', () => {
       ])
 
       // Verify current state
-      const currentResult = await db.query('SELECT * FROM migration_test WHERE id = 1')
+      const currentResult = await db.query(
+        'SELECT * FROM migration_test WHERE id = 1'
+      )
       deepStrictEqual(currentResult.rows[0].status, 'completed')
 
       // Verify history preservation
@@ -482,12 +517,18 @@ describe('Integration Tests - All Features', () => {
         ORDER BY sys_period
       `)
 
-      ok(historyResult.rows.length >= 3, 'Should preserve existing history and add new')
-      
+      ok(
+        historyResult.rows.length >= 3,
+        'Should preserve existing history and add new'
+      )
+
       const statuses = historyResult.rows.map(row => row.status)
       ok(statuses.includes('pending'), 'Should preserve original history')
       ok(statuses.includes('processing'), 'Should preserve original history')
-      ok(statuses.includes('active'), 'Should add previous current state to history')
+      ok(
+        statuses.includes('active'),
+        'Should add previous current state to history'
+      )
     })
 
     test('should maintain referential integrity during versioning', async () => {
@@ -550,7 +591,7 @@ describe('Integration Tests - All Features', () => {
       // Create user and order
       await db.executeTransaction([
         "INSERT INTO users (id, name) VALUES (1, 'Test User')",
-        "INSERT INTO orders (id, user_id, amount) VALUES (100, 1, 50.00)"
+        'INSERT INTO orders (id, user_id, amount) VALUES (100, 1, 50.00)'
       ])
 
       await db.sleep(0.1)
@@ -558,7 +599,7 @@ describe('Integration Tests - All Features', () => {
       // Update both related records
       await db.executeTransaction([
         "UPDATE users SET name = 'Updated User' WHERE id = 1",
-        "UPDATE orders SET amount = 75.00 WHERE id = 100"
+        'UPDATE orders SET amount = 75.00 WHERE id = 100'
       ])
 
       // Verify referential integrity is maintained
@@ -571,7 +612,7 @@ describe('Integration Tests - All Features', () => {
 
       deepStrictEqual(currentOrder.rows.length, 1)
       deepStrictEqual(currentOrder.rows[0].user_name, 'Updated User')
-      deepStrictEqual(parseFloat(currentOrder.rows[0].amount), 75.00)
+      deepStrictEqual(parseFloat(currentOrder.rows[0].amount), 75.0)
 
       // Verify history maintains referential relationships
       const historyJoin = await db.query(`
@@ -620,11 +661,15 @@ describe('Integration Tests - All Features', () => {
 
       // Attempt transaction that will fail
       await db.query('BEGIN')
-      
+
       try {
-        await db.query("UPDATE rollback_test SET value = 'updated' WHERE id = 1")
+        await db.query(
+          "UPDATE rollback_test SET value = 'updated' WHERE id = 1"
+        )
         // Force an error
-        await db.query("INSERT INTO rollback_test (id, value) VALUES (1, 'duplicate')") // Will fail due to PK constraint
+        await db.query(
+          "INSERT INTO rollback_test (id, value) VALUES (1, 'duplicate')"
+        ) // Will fail due to PK constraint
         await db.query('COMMIT')
       } catch (error) {
         await db.query('ROLLBACK')
@@ -635,7 +680,9 @@ describe('Integration Tests - All Features', () => {
       deepStrictEqual(result.rows[0].value, 'original')
 
       // Verify no spurious history was created
-      const historyResult = await db.query('SELECT * FROM rollback_test_history')
+      const historyResult = await db.query(
+        'SELECT * FROM rollback_test_history'
+      )
       deepStrictEqual(historyResult.rows.length, 0)
     })
 
@@ -668,7 +715,7 @@ describe('Integration Tests - All Features', () => {
 
       // Insert initial record
       await db.executeTransaction([
-        "INSERT INTO concurrent_test (id, counter) VALUES (1, 0)"
+        'INSERT INTO concurrent_test (id, counter) VALUES (1, 0)'
       ])
 
       // Simulate concurrent updates (sequential for testing)
@@ -684,12 +731,19 @@ describe('Integration Tests - All Features', () => {
       await Promise.all(updates)
 
       // Verify final state (some updates might have been lost due to concurrency, but that's expected)
-      const finalResult = await db.query('SELECT * FROM concurrent_test WHERE id = 1')
+      const finalResult = await db.query(
+        'SELECT * FROM concurrent_test WHERE id = 1'
+      )
       const finalCounter = parseInt(finalResult.rows[0].counter)
-      ok(finalCounter > 0 && finalCounter <= 10, 'Counter should be between 1 and 10')
+      ok(
+        finalCounter > 0 && finalCounter <= 10,
+        'Counter should be between 1 and 10'
+      )
 
       // Verify history was created for successful updates
-      const historyResult = await db.query('SELECT COUNT(*) as count FROM concurrent_test_history WHERE id = 1')
+      const historyResult = await db.query(
+        'SELECT COUNT(*) as count FROM concurrent_test_history WHERE id = 1'
+      )
       const historyCount = parseInt(historyResult.rows[0].count)
       ok(historyCount > 0, 'Should have some history records')
     })

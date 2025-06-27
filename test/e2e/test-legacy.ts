@@ -1,10 +1,9 @@
 import { deepStrictEqual, ok, rejects } from 'node:assert'
 import { describe, test, before, after, beforeEach } from 'node:test'
-import * as url from 'url';
+import * as url from 'url'
 import { DatabaseHelper } from './db-helper.js'
 
-const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
-
+const __dirname = url.fileURLToPath(new URL('.', import.meta.url))
 
 describe('Legacy Versioning Function E2E Tests', () => {
   let db: DatabaseHelper
@@ -63,15 +62,13 @@ describe('Legacy Versioning Function E2E Tests', () => {
       await db.query(`
         INSERT INTO versioning (a, sys_period) VALUES (1, tstzrange('-infinity', NULL))
       `)
-      
+
       await db.query(`
         INSERT INTO versioning (a, sys_period) VALUES (2, tstzrange('2000-01-01', NULL))
       `)
 
       // Test INSERT
-      await db.executeTransaction([
-        "INSERT INTO versioning (a) VALUES (3)"
-      ])
+      await db.executeTransaction(['INSERT INTO versioning (a) VALUES (3)'])
 
       const insertResult = await db.query(`
         SELECT a, "b b", lower(sys_period) = CURRENT_TIMESTAMP as is_current
@@ -84,15 +81,15 @@ describe('Legacy Versioning Function E2E Tests', () => {
       deepStrictEqual(insertResult.rows[0].a, '3')
 
       // History should be empty for inserts
-      const historyAfterInsert = await db.query('SELECT * FROM versioning_history ORDER BY a, sys_period')
+      const historyAfterInsert = await db.query(
+        'SELECT * FROM versioning_history ORDER BY a, sys_period'
+      )
       deepStrictEqual(historyAfterInsert.rows.length, 0)
 
       await db.sleep(0.1)
 
       // Test UPDATE
-      await db.executeTransaction([
-        "UPDATE versioning SET a = 4 WHERE a = 3"
-      ])
+      await db.executeTransaction(['UPDATE versioning SET a = 4 WHERE a = 3'])
 
       const updateResult = await db.query(`
         SELECT a, "b b", lower(sys_period) = CURRENT_TIMESTAMP as is_current
@@ -116,11 +113,11 @@ describe('Legacy Versioning Function E2E Tests', () => {
       await db.sleep(0.1)
 
       // Test DELETE
-      await db.executeTransaction([
-        "DELETE FROM versioning WHERE a = 4"
-      ])
+      await db.executeTransaction(['DELETE FROM versioning WHERE a = 4'])
 
-      const mainAfterDelete = await db.query('SELECT * FROM versioning WHERE a = 4')
+      const mainAfterDelete = await db.query(
+        'SELECT * FROM versioning WHERE a = 4'
+      )
       deepStrictEqual(mainAfterDelete.rows.length, 0)
 
       const historyAfterDelete = await db.query(`
@@ -161,28 +158,35 @@ describe('Legacy Versioning Function E2E Tests', () => {
       await db.query(`
         INSERT INTO versioning (a, b, sys_period) VALUES (1, 1, tstzrange('-infinity', NULL))
       `)
-      
+
       await db.query(`
         INSERT INTO versioning (a, b, sys_period) VALUES (2, 2, tstzrange('2000-01-01', NULL))
       `)
 
       // Update with no actual changes - should be ignored
-      await db.executeTransaction([
-        "UPDATE versioning SET b = 2 WHERE a = 2"
-      ])
+      await db.executeTransaction(['UPDATE versioning SET b = 2 WHERE a = 2'])
 
-      const historyAfterNoChange = await db.query('SELECT * FROM versioning_history ORDER BY a, sys_period')
-      deepStrictEqual(historyAfterNoChange.rows.length, 0, 'No history should be created for unchanged values')
+      const historyAfterNoChange = await db.query(
+        'SELECT * FROM versioning_history ORDER BY a, sys_period'
+      )
+      deepStrictEqual(
+        historyAfterNoChange.rows.length,
+        0,
+        'No history should be created for unchanged values'
+      )
 
       await db.sleep(0.1)
 
       // Update with actual changes
-      await db.executeTransaction([
-        "UPDATE versioning SET b = 3 WHERE a = 2"
-      ])
+      await db.executeTransaction(['UPDATE versioning SET b = 3 WHERE a = 2'])
 
-      const historyAfterChange = await db.query('SELECT * FROM versioning_history ORDER BY a, sys_period')
-      ok(historyAfterChange.rows.length > 0, 'History should be created for actual changes')
+      const historyAfterChange = await db.query(
+        'SELECT * FROM versioning_history ORDER BY a, sys_period'
+      )
+      ok(
+        historyAfterChange.rows.length > 0,
+        'History should be created for actual changes'
+      )
     })
   })
 
@@ -194,9 +198,7 @@ describe('Legacy Versioning Function E2E Tests', () => {
       const customTime = '2023-01-15 14:30:00.123456'
       await db.query(`SET user_defined.system_time = '${customTime}'`)
 
-      await db.executeTransaction([
-        "INSERT INTO versioning (a) VALUES (100)"
-      ])
+      await db.executeTransaction(['INSERT INTO versioning (a) VALUES (100)'])
 
       const result = await db.query(`
         SELECT a, lower(sys_period) as start_time
@@ -205,7 +207,7 @@ describe('Legacy Versioning Function E2E Tests', () => {
       `)
 
       deepStrictEqual(result.rows.length, 1)
-      
+
       // Verify custom timestamp was used (allowing for small parsing differences)
       const startTime = new Date(result.rows[0].start_time)
       const expectedTime = new Date(customTime)
@@ -254,11 +256,15 @@ describe('Legacy Versioning Function E2E Tests', () => {
         "UPDATE structure SET d = 'updated' WHERE a = 1"
       ])
 
-      const historyResult = await db.query('SELECT * FROM structure_history ORDER BY a, sys_period')
+      const historyResult = await db.query(
+        'SELECT * FROM structure_history ORDER BY a, sys_period'
+      )
       deepStrictEqual(historyResult.rows.length, 1)
       deepStrictEqual(historyResult.rows[0].d, 'test')
 
-      const mainResult = await db.query('SELECT * FROM structure ORDER BY a, sys_period')
+      const mainResult = await db.query(
+        'SELECT * FROM structure ORDER BY a, sys_period'
+      )
       deepStrictEqual(mainResult.rows.length, 1)
       deepStrictEqual(mainResult.rows[0].d, 'updated')
     })
@@ -287,7 +293,7 @@ async function setupLegacyVersioningTable(db: DatabaseHelper): Promise<void> {
   await db.query(`
     INSERT INTO versioning (a, sys_period) VALUES (1, tstzrange('-infinity', NULL))
   `)
-  
+
   await db.query(`
     INSERT INTO versioning (a, sys_period) VALUES (2, tstzrange('2000-01-01', NULL))
   `)
