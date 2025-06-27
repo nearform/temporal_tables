@@ -32,27 +32,6 @@ describe('Event Trigger Versioning E2E Tests', () => {
 
   describe('Event Trigger Setup and Management', () => {
     test('should create versioning metadata table', async () => {
-      // Load event trigger functionality
-      const eventTriggerPath = require('path').join(
-        __dirname,
-        '..',
-        '..',
-        'event_trigger_versioning.sql'
-      )
-
-      try {
-        await db.loadAndExecuteSqlFile(eventTriggerPath)
-      } catch (error) {
-        // Load manually if file loading fails
-        await db.query(`
-          CREATE TABLE IF NOT EXISTS versioning_tables_metadata (
-            table_name text,
-            table_schema text,
-            PRIMARY KEY (table_name, table_schema)
-          )
-        `)
-      }
-
       const tableExists = await db.tableExists('versioning_tables_metadata')
       ok(tableExists, 'Versioning metadata table should exist')
 
@@ -70,19 +49,10 @@ describe('Event Trigger Versioning E2E Tests', () => {
     })
 
     test('should register tables in metadata for automatic re-rendering', async () => {
-      // Ensure metadata table exists
-      await db.query(`
-        CREATE TABLE IF NOT EXISTS versioning_tables_metadata (
-          table_name text,
-          table_schema text,
-          PRIMARY KEY (table_name, table_schema)
-        )
-      `)
-
       // Register a table for versioning
       await db.query(`
-        INSERT INTO versioning_tables_metadata (table_name, table_schema)
-        VALUES ('subscriptions', 'public')
+        INSERT INTO versioning_tables_metadata (table_name, table_schema, history_table, history_table_schema, sys_period)
+        VALUES ('subscriptions', 'public', 'subscriptions_history', 'public', 'sys_period')
       `)
 
       // Verify registration
@@ -97,35 +67,6 @@ describe('Event Trigger Versioning E2E Tests', () => {
     })
 
     test('should create render_versioning_trigger procedure', async () => {
-      // Create the procedure manually for testing
-      await db.query(`
-        CREATE OR REPLACE PROCEDURE render_versioning_trigger(
-          p_table_name text, 
-          p_history_table text, 
-          p_sys_period text,
-          p_ignore_unchanged_values boolean DEFAULT false,
-          p_include_current_version_in_history boolean DEFAULT false,
-          p_mitigate_update_conflicts boolean DEFAULT false,
-          p_enable_migration_mode boolean DEFAULT false  
-        ) 
-        AS $$
-        DECLARE
-          sql text;
-        BEGIN
-          sql := generate_static_versioning_trigger(
-            p_table_name, 
-            p_history_table, 
-            p_sys_period,
-            p_ignore_unchanged_values,
-            p_include_current_version_in_history,
-            p_mitigate_update_conflicts,
-            p_enable_migration_mode    
-          );
-          EXECUTE sql;
-        END;
-        $$ LANGUAGE plpgsql
-      `)
-
       // Test the procedure
       await db.query(`
         CREATE TABLE test_table (
@@ -163,43 +104,6 @@ describe('Event Trigger Versioning E2E Tests', () => {
 
   describe('Automatic Trigger Re-rendering', () => {
     test('should handle table alterations and re-render triggers', async () => {
-      // Set up metadata table and procedure
-      await db.query(`
-        CREATE TABLE IF NOT EXISTS versioning_tables_metadata (
-          table_name text,
-          table_schema text,
-          PRIMARY KEY (table_name, table_schema)
-        )
-      `)
-
-      await db.query(`
-        CREATE OR REPLACE PROCEDURE render_versioning_trigger(
-          p_table_name text, 
-          p_history_table text, 
-          p_sys_period text,
-          p_ignore_unchanged_values boolean DEFAULT false,
-          p_include_current_version_in_history boolean DEFAULT false,
-          p_mitigate_update_conflicts boolean DEFAULT false,
-          p_enable_migration_mode boolean DEFAULT false  
-        ) 
-        AS $$
-        DECLARE
-          sql text;
-        BEGIN
-          sql := generate_static_versioning_trigger(
-            p_table_name, 
-            p_history_table, 
-            p_sys_period,
-            p_ignore_unchanged_values,
-            p_include_current_version_in_history,
-            p_mitigate_update_conflicts,
-            p_enable_migration_mode    
-          );
-          EXECUTE sql;
-        END;
-        $$ LANGUAGE plpgsql
-      `)
-
       // Create versioned table
       await db.query(`
         CREATE TABLE users (
@@ -219,8 +123,8 @@ describe('Event Trigger Versioning E2E Tests', () => {
 
       // Register for versioning
       await db.query(`
-        INSERT INTO versioning_tables_metadata (table_name, table_schema)
-        VALUES ('users', 'public')
+        INSERT INTO versioning_tables_metadata (table_name, table_schema, history_table, history_table_schema, sys_period)
+        VALUES ('users', 'public', 'users_history', 'public', 'sys_period')
       `)
 
       // Create initial trigger
@@ -239,11 +143,6 @@ describe('Event Trigger Versioning E2E Tests', () => {
       // Alter the table (add column)
       await db.query('ALTER TABLE users ADD COLUMN name text')
       await db.query('ALTER TABLE users_history ADD COLUMN name text')
-
-      // Re-render trigger manually (simulating event trigger)
-      await db.query(`
-        CALL render_versioning_trigger('users', 'users_history', 'sys_period')
-      `)
 
       // Test that versioning still works with new column
       await db.query(
@@ -283,16 +182,16 @@ describe('Event Trigger Versioning E2E Tests', () => {
         )
       `)
 
-      // Generate initial trigger
-      const triggerResult = await db.query(`
-        SELECT generate_static_versioning_trigger(
-          'subscriptions',
-          'subscriptions_history',
-          'sys_period'
-        ) as trigger_sql
+      // Register for versioning
+      await db.query(`
+        INSERT INTO versioning_tables_metadata (table_name, table_schema, history_table, history_table_schema, sys_period)
+        VALUES ('subscriptions', 'public', 'subscriptions_history', 'public', 'sys_period')
       `)
 
-      await db.query(triggerResult.rows[0].trigger_sql)
+      // Generate initial trigger
+      await db.query(`
+        CALL render_versioning_trigger('subscriptions', 'subscriptions_history', 'sys_period')
+      `)
 
       // Insert test data
       await db.query('INSERT INTO subscriptions (id, user_id) VALUES (1, 100)')
@@ -304,17 +203,6 @@ describe('Event Trigger Versioning E2E Tests', () => {
       await db.query(
         'ALTER TABLE subscriptions_history ADD COLUMN plan_type text'
       )
-
-      // Re-generate trigger with new schema
-      const newTriggerResult = await db.query(`
-        SELECT generate_static_versioning_trigger(
-          'subscriptions',
-          'subscriptions_history',
-          'sys_period'
-        ) as trigger_sql
-      `)
-
-      await db.query(newTriggerResult.rows[0].trigger_sql)
 
       // Test that new column is handled correctly
       await db.query(
@@ -361,19 +249,14 @@ describe('Event Trigger Versioning E2E Tests', () => {
       `)
 
       // Generate trigger with migration mode enabled
-      const triggerResult = await db.query(`
-        SELECT generate_static_versioning_trigger(
-          'users',
-          'users_history',
+      await db.query(`
+        CALL render_versioning_trigger(
+          'users', 
+          'users_history', 
           'sys_period',
-          false,  -- ignore_unchanged_values
-          false,  -- include_current_version_in_history
-          false,  -- mitigate_update_conflicts
-          true    -- enable_migration_mode
-        ) as trigger_sql
+          p_enable_migration_mode => true
+        )
       `)
-
-      await db.query(triggerResult.rows[0].trigger_sql)
 
       // Insert existing data with historical periods
       const oldTime = '2023-01-01 10:00:00+00'
@@ -410,33 +293,19 @@ describe('Event Trigger Versioning E2E Tests', () => {
   describe('Error Handling in Event Triggers', () => {
     test('should handle missing history table gracefully', async () => {
       await db.query(`
-        CREATE TABLE orphan_table (
+        CREATE TABLE IF NOT EXISTS orphan_table (
           id bigint,
           data text,
           sys_period tstzrange
         )
       `)
 
-      // Register table without creating history table
-      await db.query(`
-        CREATE TABLE IF NOT EXISTS versioning_tables_metadata (
-          table_name text,
-          table_schema text,
-          PRIMARY KEY (table_name, table_schema)
-        )
-      `)
-
-      await db.query(`
-        INSERT INTO versioning_tables_metadata (table_name, table_schema)
-        VALUES ('orphan_table', 'public')
-      `)
-
       // Attempt to create trigger should fail gracefully
       await rejects(async () => {
         await db.query(`
-          SELECT generate_static_versioning_trigger(
-            'orphan_table',
-            'orphan_table_history',
+          CALL render_versioning_trigger(
+            'orphan_table', 
+            'orphan_table_history', 
             'sys_period'
           )
         `)
@@ -444,6 +313,14 @@ describe('Event Trigger Versioning E2E Tests', () => {
     })
 
     test('should validate system period column exists', async () => {
+      await db.query(`
+        DROP TABLE IF EXISTS invalid_period_table CASCADE
+      `)
+
+      await db.query(`
+        DROP TABLE IF EXISTS invalid_period_table_history CASCADE
+      `)
+
       await db.query(`
         CREATE TABLE invalid_period_table (
           id bigint,
@@ -463,11 +340,11 @@ describe('Event Trigger Versioning E2E Tests', () => {
       // Should fail when trying to generate trigger
       await rejects(async () => {
         await db.query(`
-          SELECT generate_static_versioning_trigger(
-            'invalid_period_table',
-            'invalid_period_table_history',
+          CALL render_versioning_trigger(
+            'invalid_period_table', 
+            'invalid_period_table_history', 
             'sys_period'
-          )
+          )          
         `)
       })
     })
@@ -475,6 +352,14 @@ describe('Event Trigger Versioning E2E Tests', () => {
 
   describe('Complex Schema Scenarios', () => {
     test('should handle tables with complex data types', async () => {
+      await db.query(`
+        DROP TABLE IF EXISTS complex_table CASCADE
+      `)
+
+      await db.query(`
+        DROP TABLE IF EXISTS complex_table_history CASCADE
+      `)
+
       await db.query(`
         CREATE TABLE complex_table (
           id bigint,
@@ -495,15 +380,13 @@ describe('Event Trigger Versioning E2E Tests', () => {
         )
       `)
 
-      const triggerResult = await db.query(`
-        SELECT generate_static_versioning_trigger(
-          'complex_table',
-          'complex_table_history',
+      await db.query(`
+        CALL render_versioning_trigger(
+          'complex_table', 
+          'complex_table_history', 
           'sys_period'
-        ) as trigger_sql
+        )          
       `)
-
-      await db.query(triggerResult.rows[0].trigger_sql)
 
       // Test with complex data
       await db.query(`

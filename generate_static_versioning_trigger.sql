@@ -110,10 +110,10 @@ BEGIN
    WHERE attrelid = p_history_table::regclass AND attname = p_sys_period AND NOT attisdropped;
 
   -- Check sys_period type at render time
-  IF sys_period_type != 'tstzrange' THEN
+  IF COALESCE(sys_period_type, 'invalid') != 'tstzrange' THEN
     RAISE 'system period column % does not have type tstzrange', sys_period_type;
   END IF;
-  IF history_sys_period_type != 'tstzrange' THEN
+  IF COALESCE(history_sys_period_type, 'invalid') != 'tstzrange' THEN
     RAISE 'history system period column % does not have type tstzrange', history_sys_period_type;
   END IF;
 

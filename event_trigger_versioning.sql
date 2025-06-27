@@ -1,49 +1,11 @@
 -- event_trigger_versioning.sql
 -- Event trigger to re-render static versioning trigger on ALTER TABLE
 
--- this metadata table tracks all the tables the system will automatically
--- create versioning triggers for, so that we can re-render the trigger
--- when the table is altered.
-CREATE TABLE IF NOT EXISTS versioning_tables_metadata (
-  table_name text,
-  table_schema text,
-  PRIMARY KEY (table_name, table_schema)
-);
-
--- INSERT INTO versioning_tables_metadata (table_name, table_schema)
--- VALUES
---   ('public', 'subscriptions'); -- replace with your actual table and schema names
-
-CREATE OR REPLACE PROCEDURE render_versioning_trigger(
-  p_table_name text, 
-  p_history_table text, 
-  p_sys_period text,
-  p_ignore_unchanged_values boolean DEFAULT false,
-  p_include_current_version_in_history boolean DEFAULT false,
-  p_mitigate_update_conflicts boolean DEFAULT false,
-  p_enable_migration_mode boolean DEFAULT false  
-) 
-AS $$
-DECLARE
-  sql text;
-BEGIN
-  sql := generate_static_versioning_trigger(
-    p_table_name, 
-    p_history_table, 
-    p_sys_period,
-    p_ignore_unchanged_values,
-    p_include_current_version_in_history,
-    p_mitigate_update_conflicts,
-    p_enable_migration_mode    
-  );
-  EXECUTE sql;
-END;
-$$ LANGUAGE plpgsql;
-
 CREATE OR REPLACE FUNCTION rerender_versioning_trigger()
 RETURNS event_trigger AS $$
 DECLARE
   obj record;
+  config record;
   sql text;
   source_schema text;
   source_table text;
@@ -51,6 +13,7 @@ DECLARE
   sys_period text;
 BEGIN
   FOR obj IN SELECT * FROM pg_event_trigger_ddl_commands() LOOP
+    CONTINUE WHEN obj.command_tag <> 'ALTER TABLE';
     source_schema := SPLIT_PART(obj.object_identity, '.', 1);
     source_table := SPLIT_PART(obj.object_identity, '.', 2);
     -- when the source is history, invert to the actual source table
@@ -58,18 +21,22 @@ BEGIN
       source_table := SUBSTRING(source_table, 1, LENGTH(source_table) - 8);
     END IF;
     -- when a versioned table is altered, we need to re-render the trigger
-    IF obj.command_tag = 'ALTER TABLE'
-    AND EXISTS (
-      SELECT
-      FROM versioning_tables_metadata
-      WHERE table_name = source_table
-      AND table_schema = source_schema
-    ) THEN
-      -- adjust these defaults to match your versioning setup
-      history_table := source_table || '_history';
-      sys_period := 'sys_period';
-      sql := generate_static_versioning_trigger(source_table, history_table, sys_period);
-  	  EXECUTE sql;
+    SELECT *
+    INTO config
+    FROM versioning_tables_metadata
+    WHERE table_name = source_table
+    AND table_schema = source_schema;
+
+    IF FOUND THEN
+      CALL render_versioning_trigger(
+        FORMAT('%I.%I', source_schema, source_table),
+        FORMAT('%I.%I', config.history_table_schema, config.history_table),
+        config.sys_period,
+        config.ignore_unchanged_values,
+        config.include_current_version_in_history,
+        config.mitigate_update_conflicts,
+        config.enable_migration_mode
+      );
     END IF;
   END LOOP;
 END;

@@ -99,19 +99,32 @@ export class DatabaseHelper {
       '..',
       'generate_static_versioning_trigger.sql'
     )
-
+    const versioningTablesMetadataPath = join(
+      __dirname,
+      '..',
+      '..',
+      'versioning_tables_metadata.sql'
+    )
     const renderGeneratorPath = join(
       __dirname,
       '..',
       '..',
       'render_versioning_trigger.sql'
     )
+    const eventTriggerPath = join(
+      __dirname,
+      '..',
+      '..',
+      'event_trigger_versioning.sql'
+    )
 
     try {
       await this.loadAndExecuteSqlFile(versioningFunctionPath)
       await this.loadAndExecuteSqlFile(systemTimeFunctionPath)
       await this.loadAndExecuteSqlFile(staticGeneratorPath)
+      await this.loadAndExecuteSqlFile(versioningTablesMetadataPath)
       await this.loadAndExecuteSqlFile(renderGeneratorPath)
+      await this.loadAndExecuteSqlFile(eventTriggerPath)
     } catch (error) {
       console.warn('Could not load versioning functions:', error)
       // Continue with tests - some may still work

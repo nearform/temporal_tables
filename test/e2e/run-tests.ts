@@ -3,6 +3,7 @@
 import { spawn, ChildProcess } from 'child_process'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
+import { existsSync } from 'fs'
 
 const __filename: string = fileURLToPath(import.meta.url)
 const __dirname: string = dirname(__filename)
@@ -57,14 +58,28 @@ async function runTest(testFile: string): Promise<TestResult> {
     console.log(`📋 Running ${testFile}...`)
 
     const testPath: string = join(__dirname, testFile)
-    const child: ChildProcess = spawn(
-      'node',
-      ['--loader', 'ts-node/esm/transpile-only', '--test', testPath],
-      {
-        env,
-        stdio: 'pipe'
+    
+    // Use the same execution pattern as the working npm scripts
+    const nodeArgs: string[] = []
+    
+    // Check if .env file exists and add --env-file flag
+    try {
+      const envPath = join(__dirname, '../../.env')
+      if (existsSync(envPath)) {
+        nodeArgs.push('--env-file', './.env')
       }
-    )
+    } catch (error) {
+      // .env file doesn't exist, continue without it
+    }
+    
+    nodeArgs.push('--loader', 'ts-node/esm/transpile-only', '--test', testPath)
+    
+    const child: ChildProcess = spawn('node', nodeArgs, {
+      env,
+      stdio: 'pipe',
+      shell: process.platform === 'win32',
+      cwd: join(__dirname, '../..')  // Run from project root
+    })
 
     let stdout: string = ''
     let stderr: string = ''
