@@ -104,6 +104,9 @@ BEGIN
       RAISE 'version column "%" of relation "%" is not an integer', version_column_name, TG_TABLE_NAME USING
       ERRCODE = 'datatype_mismatch';
     END IF;
+    IF TG_OP = 'INSERT' THEN
+      existing_version := 0;
+    END IF;
   END IF;
 
   IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' OR (include_current_version_in_history = 'true' AND TG_OP = 'INSERT') THEN
@@ -182,8 +185,6 @@ BEGIN
           ERRCODE = 'null_value_not_allowed';
         END IF;
       END IF;
-    ELSIF TG_OP = 'INSERT' THEN
-      existing_version := 0;
     END IF;
 
     WITH history AS
@@ -352,7 +353,7 @@ BEGIN
         ') VALUES ($1.' ||
         array_to_string(commonColumns, ',$1.') ||
         ',tstzrange($2, $3, ''[)''), $4)')
-         USING OLD, range_lower, time_stamp_to_use, existing_version + 1;
+         USING OLD, range_lower, time_stamp_to_use, existing_version;
       ELSE
         EXECUTE ('INSERT INTO ' ||
         history_table ||
