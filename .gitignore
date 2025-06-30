@@ -3,6 +3,7 @@
 test/result
 .env
 .envrc
+.eslintcache
 test/remote_expected
 test/remote_sql
 test/remote_result
