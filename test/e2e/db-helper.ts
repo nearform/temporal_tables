@@ -123,15 +123,15 @@ export class DatabaseHelper {
   }
 
   async isTimestampInRange(
-    timestamp: Date, 
-    beforeTime: Date, 
+    timestamp: Date,
+    beforeTime: Date,
     afterTime: Date,
     toleranceMs: number = 1000 // 1 second tolerance by default
   ): Promise<boolean> {
     const timestampMs = timestamp.getTime()
     const beforeMs = beforeTime.getTime() - toleranceMs
     const afterMs = afterTime.getTime() + toleranceMs
-    
+
     return timestampMs >= beforeMs && timestampMs <= afterMs
   }
 
@@ -165,26 +165,22 @@ export class DatabaseHelper {
       'event_trigger_versioning.sql'
     ]
 
-    try {
-      // Verify PostgreSQL version first
-      if (!(await this.verifyPostgresVersion(minimumServerVersion))) return
+    // Verify PostgreSQL version first
+    if (!(await this.verifyPostgresVersion(minimumServerVersion)))
+      process.exit(0)
 
-      // Always load legacy files
-      for (const filename of legacySqlFiles) {
+    // Always load legacy files
+    for (const filename of legacySqlFiles) {
+      await this.loadAndExecuteSqlFile(join(rootPath, filename))
+    }
+
+    // Only load modern files if we meet the minimum version requirement
+    // (minimum version 13.0 or higher for new functionality)
+    const [majorVersion] = minimumServerVersion.split('.').map(Number)
+    if (majorVersion >= 13)
+      for (const filename of modernSqlFiles) {
         await this.loadAndExecuteSqlFile(join(rootPath, filename))
       }
-
-      // Only load modern files if we meet the minimum version requirement
-      // (minimum version 13.0 or higher for new functionality)
-      const [majorVersion] = minimumServerVersion.split('.').map(Number)
-      if (majorVersion >= 13)
-        for (const filename of modernSqlFiles) {
-          await this.loadAndExecuteSqlFile(join(rootPath, filename))
-        }
-    } catch (error) {
-      console.warn('Could not load versioning functions:', error)
-      // Continue with tests - some may still work with legacy functionality
-    }
   }
 
   async sleep(seconds: number): Promise<void> {

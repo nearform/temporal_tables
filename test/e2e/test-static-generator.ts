@@ -186,18 +186,21 @@ describe('Static Generator E2E Tests', () => {
       )
 
       ok(historyResult.rows.length > 0, 'Deleted row should be in history')
-      
+
       // Use more robust timestamp checking with tolerance
       const deletedRow = historyResult.rows[historyResult.rows.length - 1] // Get the latest row
       const deleteTimestamp = new Date(deletedRow.delete_timestamp)
       const isInRange = await db.isTimestampInRange(
-        deleteTimestamp, 
-        beforeDeleteTimestamp, 
+        deleteTimestamp,
+        beforeDeleteTimestamp,
         afterDeleteTimestamp,
         2000 // 2 second tolerance for timing issues
       )
-      
-      ok(isInRange, `Delete timestamp ${deleteTimestamp} should be between ${beforeDeleteTimestamp} and ${afterDeleteTimestamp}`)
+
+      ok(
+        isInRange,
+        `Delete timestamp ${deleteTimestamp} should be between ${beforeDeleteTimestamp} and ${afterDeleteTimestamp}`
+      )
     })
   })
 
