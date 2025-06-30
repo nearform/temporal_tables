@@ -11,7 +11,7 @@ describe('Event Trigger Versioning E2E Tests', () => {
   before(async () => {
     db = new DatabaseHelper()
     await db.connect()
-    await db.setupVersioning()
+    await db.setupVersioning(DatabaseHelper.modernMinimumPostgresVersion)
   })
 
   after(async () => {

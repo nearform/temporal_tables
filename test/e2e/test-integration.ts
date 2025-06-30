@@ -11,7 +11,7 @@ describe('Integration Tests - All Features', () => {
   before(async () => {
     db = new DatabaseHelper()
     await db.connect()
-    await db.setupVersioning()
+    await db.setupVersioning(DatabaseHelper.modernMinimumPostgresVersion)
   })
 
   after(async () => {
