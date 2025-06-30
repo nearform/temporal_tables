@@ -80,55 +80,19 @@ export class DatabaseHelper {
   }
 
   async setupVersioning(): Promise<void> {
-    // Load the main versioning function
-    const versioningFunctionPath = join(
-      __dirname,
-      '..',
-      '..',
-      'versioning_function.sql'
-    )
-    const systemTimeFunctionPath = join(
-      __dirname,
-      '..',
-      '..',
-      'system_time_function.sql'
-    )
-    const staticGeneratorPath = join(
-      __dirname,
-      '..',
-      '..',
-      'generate_static_versioning_trigger.sql'
-    )
-    const versioningTablesMetadataPath = join(
-      __dirname,
-      '..',
-      '..',
-      'versioning_tables_metadata.sql'
-    )
-    const renderGeneratorPath = join(
-      __dirname,
-      '..',
-      '..',
-      'render_versioning_trigger.sql'
-    )
-    const eventTriggerPath = join(
-      __dirname,
-      '..',
-      '..',
-      'event_trigger_versioning.sql'
-    )
+    const rootPath = join(__dirname, '..', '..')
 
-    try {
-      await this.loadAndExecuteSqlFile(versioningFunctionPath)
-      await this.loadAndExecuteSqlFile(systemTimeFunctionPath)
-      await this.loadAndExecuteSqlFile(staticGeneratorPath)
-      await this.loadAndExecuteSqlFile(versioningTablesMetadataPath)
-      await this.loadAndExecuteSqlFile(renderGeneratorPath)
-      await this.loadAndExecuteSqlFile(eventTriggerPath)
-    } catch (error) {
-      console.warn('Could not load versioning functions:', error)
-      // Continue with tests - some may still work
-    }
+    const sqlFiles = [
+      'versioning_function.sql',
+      'system_time_function.sql',
+      'generate_static_versioning_trigger.sql',
+      'versioning_tables_metadata.sql',
+      'render_versioning_trigger.sql',
+      'event_trigger_versioning.sql'
+    ]
+
+    for (const filename of sqlFiles)
+      await this.loadAndExecuteSqlFile(join(rootPath, filename))
   }
 
   async cleanup(): Promise<void> {
