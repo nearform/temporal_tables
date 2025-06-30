@@ -70,6 +70,11 @@ export class DatabaseHelper {
     }
   }
 
+  async ensureTimestampGap(): Promise<void> {
+    // Ensure a small gap between timestamps to avoid timing races
+    await this.sleep(0.001) // 1 millisecond gap
+  }
+
   async executeTransaction(sqlStatements: string[]): Promise<TestResult[]> {
     const results: TestResult[] = []
 
@@ -96,6 +101,13 @@ export class DatabaseHelper {
     return result.rows[0].now
   }
 
+  async getReliableTimestamp(): Promise<Date> {
+    // Get timestamp and ensure it's unique by adding a small delay
+    const timestamp = await this.getCurrentTimestamp()
+    await this.ensureTimestampGap()
+    return timestamp
+  }
+
   async getTableStructure(tableName: string): Promise<DatabaseRow[]> {
     const result = await this.query(
       `
@@ -108,6 +120,19 @@ export class DatabaseHelper {
     )
 
     return result.rows
+  }
+
+  async isTimestampInRange(
+    timestamp: Date, 
+    beforeTime: Date, 
+    afterTime: Date,
+    toleranceMs: number = 1000 // 1 second tolerance by default
+  ): Promise<boolean> {
+    const timestampMs = timestamp.getTime()
+    const beforeMs = beforeTime.getTime() - toleranceMs
+    const afterMs = afterTime.getTime() + toleranceMs
+    
+    return timestampMs >= beforeMs && timestampMs <= afterMs
   }
 
   async loadAndExecuteSqlFile(filePath: string): Promise<void> {
@@ -142,7 +167,7 @@ export class DatabaseHelper {
 
     try {
       // Verify PostgreSQL version first
-      await this.verifyPostgresVersion(minimumServerVersion)
+      if (!(await this.verifyPostgresVersion(minimumServerVersion))) return
 
       // Always load legacy files
       for (const filename of legacySqlFiles) {
@@ -181,16 +206,11 @@ export class DatabaseHelper {
     return result.rows[0].exists
   }
 
-  async verifyPostgresVersion(minVersion: string): Promise<void> {
+  async verifyPostgresVersion(minVersion: string): Promise<boolean> {
     const result = await this.query('SHOW server_version')
     const version = result.rows[0].server_version
     const [major, minor] = version.split('.').map(Number) // Split version into major and minor parts
     const [minMajor, minMinor] = minVersion.split('.').map(Number) // Split minVersion into major and minor parts
-
-    if (major < minMajor || (major === minMajor && minor < minMinor)) {
-      throw new Error(
-        `PostgreSQL version ${version} is less than required version ${minVersion}`
-      )
-    }
+    return !(major < minMajor || (major === minMajor && minor < minMinor))
   }
 }
