@@ -3,6 +3,7 @@
 export PGDATESTYLE="Postgres, MDY";
 
 createdb temporal_tables_test
+psql temporal_tables_test -q -c "ALTER DATABASE temporal_tables_test SET timezone TO 'UTC';"
 psql temporal_tables_test -q -f versioning_function.sql
 psql temporal_tables_test -q -f system_time_function.sql
 
@@ -30,7 +31,7 @@ TESTS="
   non_equality_types non_equality_types_unchanged_values
   set_system_time versioning_including_current_version_in_history
   versioning_rollback_include_current_version_in_history noop_update
-  migration_mode
+  migration_mode increment_version increment_version_with_include_current_version_in_history
   "
 
 for name in $TESTS; do
