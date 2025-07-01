@@ -2,6 +2,8 @@
 
 [![ci](https://github.com/nearform/temporal_tables/actions/workflows/ci.yml/badge.svg)](https://github.com/nearform/temporal_tables/actions/workflows/ci.yml)
 
+> **⚠️ IMPORTANT:** PostgreSQL 13.21 or higher is required for modern features. Legacy support for PostgreSQL versions below 13 has been dropped.
+
 This rewrite aims to provide a temporal tables solution in PL/pgSQL, targeting AWS RDS, Google Cloud SQL, and Azure Database for PostgreSQL where custom C extensions aren't permitted.
 
 The script in `versioning_function.sql` serves as a direct substitute.
@@ -22,8 +24,12 @@ Over time, new features have been introduced while maintaining backward compatib
 
 ## PostgreSQL Version Requirements
 
-- **Legacy functionality** (basic versioning): Works with any PostgreSQL version
-- **Modern functionality** (static triggers, metadata management): Requires PostgreSQL 13.21 or higher
+**Minimum Required Version: PostgreSQL 13.21**
+
+- **All functionality** (including static triggers, metadata management, event triggers): Requires PostgreSQL 13.21 or higher
+- **Legacy PostgreSQL versions** (below 13): No longer supported
+
+For full feature compatibility and performance, we recommend using the latest PostgreSQL version available.
 
 ## Usage
 
