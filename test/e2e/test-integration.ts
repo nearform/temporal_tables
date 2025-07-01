@@ -432,9 +432,8 @@ describe('Integration Tests - All Features', () => {
         ORDER BY sys_period
       `)
 
-      for (let i = 0; i < 50; i++) {
+      for (let i = 0; i < 50; i++)
         deepStrictEqual(parseInt(historyValues.rows[i].value), i)
-      }
     })
   })
 

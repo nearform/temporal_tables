@@ -81,12 +81,11 @@ export class DatabaseHelper {
     await this.query('BEGIN')
 
     try {
-      for (const sql of sqlStatements) {
+      for (const sql of sqlStatements)
         if (sql.trim()) {
           const result = await this.query(sql)
           results.push(result)
         }
-      }
       await this.query('COMMIT')
     } catch (error) {
       await this.query('ROLLBACK')
@@ -170,17 +169,15 @@ export class DatabaseHelper {
       process.exit(0)
 
     // Always load legacy files
-    for (const filename of legacySqlFiles) {
+    for (const filename of legacySqlFiles)
       await this.loadAndExecuteSqlFile(join(rootPath, filename))
-    }
 
     // Only load modern files if we meet the minimum version requirement
     // (minimum version 13.0 or higher for new functionality)
     const [majorVersion] = minimumServerVersion.split('.').map(Number)
     if (majorVersion >= 13)
-      for (const filename of modernSqlFiles) {
+      for (const filename of modernSqlFiles)
         await this.loadAndExecuteSqlFile(join(rootPath, filename))
-      }
   }
 
   async sleep(seconds: number): Promise<void> {
