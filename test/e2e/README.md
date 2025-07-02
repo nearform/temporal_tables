@@ -44,6 +44,14 @@ Comprehensive integration tests:
 - Error recovery and edge cases
 - Concurrent modification handling
 
+### `test-performance-comparison.ts`
+Performance benchmarking and comparison tests:
+- Side-by-side performance comparison between legacy and static generator implementations
+- Detailed timing analysis for INSERT, UPDATE, and DELETE operations
+- Performance scaling tests with increasing data volumes
+- Comprehensive reporting with formatted tables showing performance differences
+- Analysis of performance improvements and optimization opportunities
+
 ## Prerequisites
 
 1. **PostgreSQL Database**: Either via Docker or local installation
@@ -94,6 +102,9 @@ npm run test:e2e:legacy
 
 # Integration tests
 npm run test:e2e:integration
+
+# Performance comparison tests
+npm run test:e2e:performance
 ```
 
 ### Manual Test Execution
@@ -164,12 +175,53 @@ describe('Feature Name', () => {
 - ✅ Concurrent access patterns
 - ✅ Referential integrity maintenance
 
+### Performance Testing
+- ✅ Comparative benchmarking between legacy and static implementations
+- ✅ Performance scaling analysis with increasing data volumes
+- ✅ Detailed timing measurements for all CRUD operations
+- ✅ Performance regression detection and improvement analysis
+- ✅ Professional formatted reports with alignment and clear metrics
+
 ### Edge Cases
 - ✅ Transaction rollback handling
 - ✅ Rapid sequential updates
 - ✅ Bulk data operations
 - ✅ Complex data types (JSON, arrays, custom types)
 - ✅ Migration mode with existing data
+
+## Performance Testing
+
+The performance comparison tests provide comprehensive benchmarking capabilities to evaluate the effectiveness of the static trigger generator versus the legacy versioning function.
+
+### Test Structure
+The performance tests include:
+
+1. **Implementation Comparison**: Side-by-side testing of legacy function vs static generator
+2. **Operation Benchmarking**: Detailed timing for INSERT, UPDATE, and DELETE operations
+3. **Scaling Analysis**: Performance evaluation with increasing data volumes (100, 500, 1000+ records)
+4. **Professional Reporting**: Formatted tables with alignment, borders, and clear metrics
+
+### Sample Output
+```
+┌───────────────────────────────────────────────────────────────────────────────────┐
+│                          Performance Comparison Report                            │
+├─────────────┬──────────────┬──────────────┬─────────────┬─────────────────────────┤
+│ Operation   │ Legacy (ms)  │ Static (ms)  │ Difference  │ Improvement             │
+├─────────────┼──────────────┼──────────────┼─────────────┼─────────────────────────┤
+│ INSERT      │        45.23 │        12.67 │      32.56  │ 72.0% faster            │
+│ UPDATE      │        38.91 │        10.44 │      28.47  │ 73.2% faster            │
+│ DELETE      │        31.78 │         9.12 │      22.66  │ 71.3% faster            │
+└─────────────┴──────────────┴──────────────┴─────────────┴─────────────────────────┘
+```
+
+### Running Performance Tests
+```bash
+# Run performance comparison
+npm run test:e2e:performance
+
+# Run with detailed output
+NODE_ENV=development npm run test:e2e:performance
+```
 
 ## Database Configuration
 
@@ -231,6 +283,8 @@ net start | findstr postgres
 - Tests include intentional delays (`pg_sleep`) for timestamp differentiation
 - Large datasets in performance tests may take time
 - Concurrent tests may be slower due to database locking
+- Performance comparison tests may take longer due to multiple benchmark runs
+- Ensure the database server has adequate resources for accurate performance measurements
 
 ## Contributing
 
