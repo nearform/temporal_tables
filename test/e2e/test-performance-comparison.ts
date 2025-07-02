@@ -213,39 +213,16 @@ describe('Legacy vs Modern Implementation Performance Comparison', () => {
       [legacyMetrics.totalTime, modernMetrics.totalTime]
     ]
 
-    // Calculate dynamic column widths
-    const operationWidth = Math.max(9, ...operations.map(op => op.length))
-    const legacyWidth = Math.max(
-      6,
-      ...times.map(([legacy]) => `${legacy}ms`.length)
-    )
-    const modernWidth = Math.max(
-      6,
-      ...times.map(([, modern]) => `${modern}ms`.length)
-    )
-    const diffWidth = Math.max(
-      6,
-      ...times.map(
-        ([legacy, modern]) => `${Math.abs(legacy - modern)}ms`.length
-      )
-    )
-    const improvWidth = 7 // Fixed width for percentage
-    const statusWidth = 3 // Fixed width for checkmark/X
+    // Calculate dynamic column widths (ensure column headers fit)
+    const operationWidth = Math.max('Operation'.length, ...operations.map(op => op.length))
+    const legacyWidth = Math.max('Legacy'.length, ...times.map(([legacy]) => `${legacy}ms`.length))
+    const modernWidth = Math.max('Modern'.length, ...times.map(([, modern]) => `${modern}ms`.length))
+    const diffWidth = Math.max('Diff'.length, ...times.map(([legacy, modern]) => `${Math.abs(legacy - modern)}ms`.length))
+    const improvWidth = Math.max('Improv'.length, 7) // Fixed width for percentage
+    const statusWidth = Math.max('✓'.length, 1) // Fixed width for checkmark/X
 
-    const totalWidth =
-      operationWidth +
-      legacyWidth +
-      modernWidth +
-      diffWidth +
-      improvWidth +
-      statusWidth +
-      17 // 17 for separators and padding
-
-    const createHeaderSeparator = () =>
-      `├${'─'.repeat(operationWidth + 2)}┼${'─'.repeat(legacyWidth + 2)}┼${'─'.repeat(modernWidth + 2)}┼${'─'.repeat(diffWidth + 2)}┼${'─'.repeat(improvWidth + 2)}┼${'─'.repeat(statusWidth + 2)}┤`
-
-    const createDataSeparator = () =>
-      `├${'─'.repeat(operationWidth + 2)}┼${'─'.repeat(legacyWidth + 2)}┼${'─'.repeat(modernWidth + 2)}┼${'─'.repeat(diffWidth + 2)}┼${'─'.repeat(improvWidth + 2)}┼${'─'.repeat(statusWidth + 2)}┤`
+    // Calculate total width precisely: sum of all column widths + padding (2 per column) + separators (1 per separator)
+    const totalWidth = (operationWidth + 2) + (legacyWidth + 2) + (modernWidth + 2) + (diffWidth + 2) + (improvWidth + 2) + (statusWidth + 2) + 5 // 5 separators (|)
 
     const createRow = (
       operation: string,
@@ -254,8 +231,7 @@ describe('Legacy vs Modern Implementation Performance Comparison', () => {
       isTotal: boolean = false
     ) => {
       const diff = legacyTime - modernTime
-      const percentage =
-        legacyTime > 0 ? ((diff / legacyTime) * 100).toFixed(1) : '0.0'
+      const percentage = legacyTime > 0 ? ((diff / legacyTime) * 100).toFixed(1) : '0.0'
       const symbol = diff > 0 ? '✓' : diff < 0 ? '✗' : '≈'
       const diffDisplay = diff > 0 ? `+${diff}` : diff.toString()
 
@@ -263,26 +239,19 @@ describe('Legacy vs Modern Implementation Performance Comparison', () => {
     }
 
     const titleText = 'PERFORMANCE COMPARISON REPORT'
-    const availableSpace = totalWidth - 2 // Account for the border characters
-    const titlePadding = Math.max(
-      0,
-      Math.floor((availableSpace - titleText.length) / 2)
-    )
-    const title =
-      ' '.repeat(titlePadding) +
-      titleText +
-      ' '.repeat(availableSpace - titleText.length - titlePadding)
+    const titlePadding = Math.max(0, Math.floor((totalWidth - titleText.length) / 2))
+    const title = ' '.repeat(titlePadding) + titleText + ' '.repeat(totalWidth - titleText.length - titlePadding)
 
     return `
 ┌${'─'.repeat(totalWidth)}┐
 │${title}│
 ├${'─'.repeat(operationWidth + 2)}┬${'─'.repeat(legacyWidth + 2)}┬${'─'.repeat(modernWidth + 2)}┬${'─'.repeat(diffWidth + 2)}┬${'─'.repeat(improvWidth + 2)}┬${'─'.repeat(statusWidth + 2)}┤
 │ ${'Operation'.padEnd(operationWidth)} │ ${'Legacy'.padStart(legacyWidth)} │ ${'Modern'.padStart(modernWidth)} │ ${'Diff'.padStart(diffWidth)} │ ${'Improv'.padStart(improvWidth)} │ ${'✓'.padStart(statusWidth)} │
-${createHeaderSeparator()}
+├${'─'.repeat(operationWidth + 2)}┼${'─'.repeat(legacyWidth + 2)}┼${'─'.repeat(modernWidth + 2)}┼${'─'.repeat(diffWidth + 2)}┼${'─'.repeat(improvWidth + 2)}┼${'─'.repeat(statusWidth + 2)}┤
 ${createRow('INSERT', legacyMetrics.insertTime, modernMetrics.insertTime)}
 ${createRow('UPDATE', legacyMetrics.updateTime, modernMetrics.updateTime)}
 ${createRow('DELETE', legacyMetrics.deleteTime, modernMetrics.deleteTime)}
-${createDataSeparator()}
+├${'─'.repeat(operationWidth + 2)}┼${'─'.repeat(legacyWidth + 2)}┼${'─'.repeat(modernWidth + 2)}┼${'─'.repeat(diffWidth + 2)}┼${'─'.repeat(improvWidth + 2)}┼${'─'.repeat(statusWidth + 2)}┤
 ${createRow('TOTAL', legacyMetrics.totalTime, modernMetrics.totalTime, true)}
 └${'─'.repeat(operationWidth + 2)}┴${'─'.repeat(legacyWidth + 2)}┴${'─'.repeat(modernWidth + 2)}┴${'─'.repeat(diffWidth + 2)}┴${'─'.repeat(improvWidth + 2)}┴${'─'.repeat(statusWidth + 2)}┘
 
@@ -503,50 +472,26 @@ ${createRow('TOTAL', legacyMetrics.totalTime, modernMetrics.totalTime, true)}
       ratio: number
     }[]
   ): string {
-    // Calculate dynamic column widths
-    const dataSizeWidth = Math.max(
-      9,
-      ...results.map(r => r.dataSize.toLocaleString().length)
-    )
-    const legacyWidth = Math.max(
-      6,
-      ...results.map(r => `${r.legacyTime}ms`.length)
-    )
-    const modernWidth = Math.max(
-      6,
-      ...results.map(r => `${r.modernTime}ms`.length)
-    )
-    const ratioWidth = 8
-    const throughputWidth = 12
+    // Calculate dynamic column widths (ensure column headers fit)
+    const dataSizeWidth = Math.max('Data Size'.length, ...results.map(r => r.dataSize.toLocaleString().length))
+    const legacyWidth = Math.max('Legacy'.length, ...results.map(r => `${r.legacyTime}ms`.length))
+    const modernWidth = Math.max('Modern'.length, ...results.map(r => `${r.modernTime}ms`.length))
+    const ratioWidth = Math.max('Ratio'.length, 8)
+    const throughputWidth = Math.max('Throughput'.length, 12)
 
-    const totalWidth =
-      dataSizeWidth +
-      legacyWidth +
-      modernWidth +
-      ratioWidth +
-      throughputWidth +
-      20 // padding + separators
-
-    const createHeaderSeparator = () =>
-      `├${'─'.repeat(dataSizeWidth + 2)}┼${'─'.repeat(legacyWidth + 2)}┼${'─'.repeat(modernWidth + 2)}┼${'─'.repeat(ratioWidth + 2)}┼${'─'.repeat(throughputWidth + 2)}┤`
+    // Calculate total width precisely: sum of all column widths + padding (2 per column) + separators (1 per separator)
+    const totalWidth = (dataSizeWidth + 2) + (legacyWidth + 2) + (modernWidth + 2) + (ratioWidth + 2) + (throughputWidth + 2) + 4 // 4 separators (|)
 
     const titleText = 'PERFORMANCE SCALING REPORT'
-    const availableSpace = totalWidth - 2 // Account for the border characters
-    const titlePadding = Math.max(
-      0,
-      Math.floor((availableSpace - titleText.length) / 2)
-    )
-    const title =
-      ' '.repeat(titlePadding) +
-      titleText +
-      ' '.repeat(availableSpace - titleText.length - titlePadding)
+    const titlePadding = Math.max(0, Math.floor((totalWidth - titleText.length) / 2))
+    const title = ' '.repeat(titlePadding) + titleText + ' '.repeat(totalWidth - titleText.length - titlePadding)
 
     let report = `
 ┌${'─'.repeat(totalWidth)}┐
 │${title}│
 ├${'─'.repeat(dataSizeWidth + 2)}┬${'─'.repeat(legacyWidth + 2)}┬${'─'.repeat(modernWidth + 2)}┬${'─'.repeat(ratioWidth + 2)}┬${'─'.repeat(throughputWidth + 2)}┤
 │ ${'Data Size'.padEnd(dataSizeWidth)} │ ${'Legacy'.padStart(legacyWidth)} │ ${'Modern'.padStart(modernWidth)} │ ${'Ratio'.padStart(ratioWidth)} │ ${'Throughput'.padStart(throughputWidth)} │
-${createHeaderSeparator()}`
+├${'─'.repeat(dataSizeWidth + 2)}┼${'─'.repeat(legacyWidth + 2)}┼${'─'.repeat(modernWidth + 2)}┼${'─'.repeat(ratioWidth + 2)}┼${'─'.repeat(throughputWidth + 2)}┤`
 
     for (const result of results) {
       const throughput = Math.round(
