@@ -217,12 +217,14 @@ describe('Legacy vs Modern Implementation Performance Comparison', () => {
     const operationWidth = Math.max('Operation'.length, ...operations.map(op => op.length))
     const legacyWidth = Math.max('Legacy'.length, ...times.map(([legacy]) => `${legacy}ms`.length))
     const modernWidth = Math.max('Modern'.length, ...times.map(([, modern]) => `${modern}ms`.length))
-    const diffWidth = Math.max('Diff'.length, ...times.map(([legacy, modern]) => `${Math.abs(legacy - modern)}ms`.length))
-    const improvWidth = Math.max('Improv'.length, 7) // Fixed width for percentage
+    const diffWidth = Math.max('Difference'.length, ...times.map(([legacy, modern]) => `${Math.abs(legacy - modern)}ms`.length))
+    const improvWidth = Math.max('Improvement'.length, 7) // Fixed width for percentage
     const statusWidth = Math.max('✓'.length, 1) // Fixed width for checkmark/X
 
-    // Calculate total width precisely: sum of all column widths + padding (2 per column) + separators (1 per separator)
-    const totalWidth = (operationWidth + 2) + (legacyWidth + 2) + (modernWidth + 2) + (diffWidth + 2) + (improvWidth + 2) + (statusWidth + 2) + 5 // 5 separators (|)
+    // Calculate the total width by summing all components explicitly
+    const columnWidths = [operationWidth + 2, legacyWidth + 2, modernWidth + 2, diffWidth + 2, improvWidth + 2, statusWidth + 2]
+    const separatorCount = columnWidths.length - 1 // n columns = n-1 separators
+    const totalWidth = columnWidths.reduce((sum, width) => sum + width, 0) + separatorCount
 
     const createRow = (
       operation: string,
@@ -246,7 +248,7 @@ describe('Legacy vs Modern Implementation Performance Comparison', () => {
 ┌${'─'.repeat(totalWidth)}┐
 │${title}│
 ├${'─'.repeat(operationWidth + 2)}┬${'─'.repeat(legacyWidth + 2)}┬${'─'.repeat(modernWidth + 2)}┬${'─'.repeat(diffWidth + 2)}┬${'─'.repeat(improvWidth + 2)}┬${'─'.repeat(statusWidth + 2)}┤
-│ ${'Operation'.padEnd(operationWidth)} │ ${'Legacy'.padStart(legacyWidth)} │ ${'Modern'.padStart(modernWidth)} │ ${'Diff'.padStart(diffWidth)} │ ${'Improv'.padStart(improvWidth)} │ ${'✓'.padStart(statusWidth)} │
+│ ${'Operation'.padEnd(operationWidth)} │ ${'Legacy'.padStart(legacyWidth)} │ ${'Modern'.padStart(modernWidth)} │ ${'Difference'.padStart(diffWidth)} │ ${'Improvement'.padStart(improvWidth)} │ ${'✓'.padStart(statusWidth)} │
 ├${'─'.repeat(operationWidth + 2)}┼${'─'.repeat(legacyWidth + 2)}┼${'─'.repeat(modernWidth + 2)}┼${'─'.repeat(diffWidth + 2)}┼${'─'.repeat(improvWidth + 2)}┼${'─'.repeat(statusWidth + 2)}┤
 ${createRow('INSERT', legacyMetrics.insertTime, modernMetrics.insertTime)}
 ${createRow('UPDATE', legacyMetrics.updateTime, modernMetrics.updateTime)}
