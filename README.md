@@ -477,7 +477,6 @@ The modern functionality includes a metadata table to track all versioned tables
 
 - **Automatic trigger re-rendering** when table schemas change
 - **Centralized configuration** for all versioned tables
-- **Audit trail** with created_at and updated_at timestamps
 - **Schema flexibility** with separate schemas for tables and history tables
 
 <a name="static-trigger-code-generation"></a>
