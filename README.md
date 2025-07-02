@@ -272,13 +272,13 @@ FOR EACH ROW EXECUTE PROCEDURE versioning(
 
 ### Migration Mode
 
-Migration mode (seventh parameter) enables gradual adoption of the `include_current_version_in_history` feature for existing tables without requiring a maintenance window:
+Migration mode (sixth parameter) enables gradual adoption of the `include_current_version_in_history` feature for existing tables without requiring a maintenance window:
 
 ```sql
 CREATE TRIGGER versioning_trigger
 BEFORE INSERT OR UPDATE OR DELETE ON subscriptions
 FOR EACH ROW EXECUTE PROCEDURE versioning(
-  'sys_period', 'subscriptions_history', true, false, true, false, true
+  'sys_period', 'subscriptions_history', true, false, true, true
 );
 ```
 
