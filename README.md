@@ -12,6 +12,7 @@ Over time, new features have been introduced while maintaining backward compatib
 
 - [Ignore updates with no actual changes](#ignore-unchanged-values)
 - [Include the current version in history](#include-current-version-in-history)
+- [Autoincrementing version number support](#autoincrementing-version-number)
 
 <a name="usage"></a>
 
@@ -367,10 +368,9 @@ When migration mode is enabled:
 
 **Note:** The automatic migration happens gradually, filling in missing history only when existing records are updated or deleted. As a result, records that rarely change will still require manual migration using the [method described above](#migration-to-include-current-version-in-history). However, since the most active records will be automatically migrated, the risk of missing important data is greatly reduced, eliminating the need for a dedicated maintenance window.
 
-<a name="migrations"></a>
+<a name="autoincrementing-version-number"></a>
 
-
-### Autoincrement version number
+### Autoincrementing version number
 
 There is support for autoincrementing a version number whenever values of a row get updated. This may be useful for a few reasons:
 
@@ -410,6 +410,8 @@ UPDATE subscriptions SET state='updated' WHERE name='test1'
 ```
 then the table will reflect incremented version `name=test1, state=updated, version=2`. And correspondingly the history table will have the old version `name=test1, state=inserted, version=1` (or both versions if `include_current_version_in_history` is turned on).
 
+
+<a name="migrations"></a>
 
 ## Migrations
 
