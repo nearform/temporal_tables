@@ -1,6 +1,6 @@
 {
   "name": "temporal_tables",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "A postgresql temporal_tables extension in PL/pgSQL",
   "repository": {
     "type": "git",
