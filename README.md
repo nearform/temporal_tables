@@ -12,6 +12,7 @@ Over time, new features have been introduced while maintaining backward compatib
 
 - [Ignore updates with no actual changes](#ignore-unchanged-values)
 - [Include the current version in history](#include-current-version-in-history)
+- [Autoincrementing version number support](#autoincrementing-version-number)
 
 <a name="usage"></a>
 
@@ -384,6 +385,49 @@ When migration mode is enabled:
    - You can disable migration mode after all records have been migrated
 
 **Note:** The automatic migration happens gradually, filling in missing history only when existing records are updated or deleted. As a result, records that rarely change will still require manual migration using the [method described above](#migration-to-include-current-version-in-history). However, since the most active records will be automatically migrated, the risk of missing important data is greatly reduced, eliminating the need for a dedicated maintenance window.
+
+<a name="autoincrementing-version-number"></a>
+
+### Autoincrementing version number
+
+There is support for autoincrementing a version number whenever values of a row get updated. This may be useful for a few reasons:
+
+* Easier to see how many updates have been made to a row
+* Adding primary keys to the history table. E.g. if the main table has a primary key 'id', it will allow adding a primary key 'id', 'version' to the history table. A lot of ORMs expect a primary key
+
+To achieve this:
+* Add an `int` `version` column (or any other name you prefer) to the base table, e.g.
+   ```sql
+   ALTER TABLE subscriptions ADD COLUMN version int NOT NULL DEFAULT 1
+   ```
+* Add the same to the history table
+   ```sql
+   ALTER TABLE subscriptions_history ADD COLUMN version int NOT NULL
+   ```
+* Create the trigger to use the feature
+   ```sql
+   DROP TRIGGER IF EXISTS versioning_trigger ON subscriptions;
+   CREATE TRIGGER versioning_trigger
+   BEFORE INSERT OR UPDATE OR DELETE ON subscriptions
+   FOR EACH ROW EXECUTE PROCEDURE versioning(
+     'sys_period', 'subscriptions_history', false, false, false, false,
+     true, -- turn on increment_version
+     'version' -- version_column_name
+   );
+   ```
+
+After this, if you insert a new row
+```sql
+INSERT INTO subscriptions (name, state) VALUES ('test1', 'inserted')
+```
+the table will start with the row having the initial version `name=test1, state=inserted, version=1`.
+
+If then, the row gets updated with
+```sql
+UPDATE subscriptions SET state='updated' WHERE name='test1'
+```
+then the table will reflect incremented version `name=test1, state=updated, version=2`. And correspondingly the history table will have the old version `name=test1, state=inserted, version=1` (or both versions if `include_current_version_in_history` is turned on).
+
 
 <a name="migrations"></a>
 
