@@ -47,25 +47,17 @@ describe('Static Generator E2E Tests', () => {
       `)
 
       // Use static generator to create trigger
-      const triggerResult = await db.query(`
-        SELECT generate_static_versioning_trigger(
-          'versioning',
-          'versioning_history', 
-          'sys_period',
-          false,
-          false,
-          false,
-          false
-        ) as trigger_sql
+      await db.query(`
+        CALL render_versioning_trigger(
+          p_table_name => 'versioning',
+          p_history_table => 'versioning_history',
+          p_sys_period => 'sys_period',
+          p_ignore_unchanged_values => false,
+          p_include_current_version_in_history => false,
+          p_mitigate_update_conflicts => false,
+          p_enable_migration_mode => false
+        )
       `)
-
-      ok(triggerResult.rows.length > 0)
-      ok(
-        triggerResult.rows[0].trigger_sql.includes('CREATE OR REPLACE FUNCTION')
-      )
-
-      // Execute the generated trigger
-      await db.query(triggerResult.rows[0].trigger_sql)
 
       // Verify table exists
       const tableExists = await db.tableExists('versioning')
@@ -224,19 +216,17 @@ describe('Static Generator E2E Tests', () => {
       `)
 
       // Generate trigger with ignore_unchanged_values = true
-      const triggerResult = await db.query(`
-        SELECT generate_static_versioning_trigger(
-          'versioning',
-          'versioning_history', 
-          'sys_period',
-          true,  -- ignore_unchanged_values
-          false,
-          false,
-          false
-        ) as trigger_sql
+      await db.query(`
+        CALL render_versioning_trigger(
+          p_table_name => 'versioning',
+          p_history_table => 'versioning_history',
+          p_sys_period => 'sys_period',
+          p_ignore_unchanged_values => true,
+          p_include_current_version_in_history => false,
+          p_mitigate_update_conflicts => false,
+          p_enable_migration_mode => false
+        )
       `)
-
-      await db.query(triggerResult.rows[0].trigger_sql)
 
       // Insert initial data
       await db.executeTransaction([
@@ -288,19 +278,17 @@ describe('Static Generator E2E Tests', () => {
       `)
 
       // Generate trigger with include_current_version_in_history = true
-      const triggerResult = await db.query(`
-        SELECT generate_static_versioning_trigger(
-          'versioning',
-          'versioning_history', 
-          'sys_period',
-          false,
-          true,  -- include_current_version_in_history
-          false,
-          false
-        ) as trigger_sql
+      await db.query(`
+        CALL render_versioning_trigger(
+          p_table_name => 'versioning',
+          p_history_table => 'versioning_history',
+          p_sys_period => 'sys_period',
+          p_ignore_unchanged_values => false,
+          p_include_current_version_in_history => true,
+          p_mitigate_update_conflicts => false,
+          p_enable_migration_mode => false
+        )
       `)
-
-      await db.query(triggerResult.rows[0].trigger_sql)
 
       // Insert data
       await db.executeTransaction(['INSERT INTO versioning (a) VALUES (1)'])
@@ -377,14 +365,14 @@ describe('Static Generator E2E Tests', () => {
       // Should throw error when generating trigger
       await rejects(async () => {
         await db.query(`
-          SELECT generate_static_versioning_trigger(
-            'invalid_table',
-            'invalid_table_history', 
-            'sys_period',
-            false,
-            false,
-            false,
-            false
+          CALL render_versioning_trigger(
+            p_table_name => 'invalid_table',
+            p_history_table => 'invalid_table_history',
+            p_sys_period => 'sys_period',
+            p_ignore_unchanged_values => false,
+            p_include_current_version_in_history => false,
+            p_mitigate_update_conflicts => false,
+            p_enable_migration_mode => false
           )
         `)
       })
@@ -403,14 +391,14 @@ describe('Static Generator E2E Tests', () => {
       // Should throw error when generating trigger
       await rejects(async () => {
         await db.query(`
-          SELECT generate_static_versioning_trigger(
-            'versioning',
-            'nonexistent_history', 
-            'sys_period',
-            false,
-            false,
-            false,
-            false
+          CALL render_versioning_trigger(
+            p_table_name => 'versioning',
+            p_history_table => 'nonexistent_history',
+            p_sys_period => 'sys_period',
+            p_ignore_unchanged_values => false,
+            p_include_current_version_in_history => false,
+            p_mitigate_update_conflicts => false,
+            p_enable_migration_mode => false
           )
         `)
       })
@@ -448,19 +436,17 @@ describe('Static Generator E2E Tests', () => {
         )
       `)
 
-      const triggerResult = await db.query(`
-        SELECT generate_static_versioning_trigger(
-          'structure',
-          'structure_history', 
-          'sys_period',
-          false,
-          false,
-          false,
-          false
-        ) as trigger_sql
+      await db.query(`
+        CALL render_versioning_trigger(
+          p_table_name => 'structure',
+          p_history_table => 'structure_history',
+          p_sys_period => 'sys_period',
+          p_ignore_unchanged_values => false,
+          p_include_current_version_in_history => false,
+          p_mitigate_update_conflicts => false,
+          p_enable_migration_mode => false
+        )
       `)
-
-      await db.query(triggerResult.rows[0].trigger_sql)
 
       // Test with various data types
       await db.executeTransaction([
@@ -505,19 +491,17 @@ describe('Static Generator E2E Tests', () => {
         )
       `)
 
-      const triggerResult = await db.query(`
-        SELECT generate_static_versioning_trigger(
-          'test_schema.versioning',
-          'test_schema.versioning_history', 
-          'sys_period',
-          false,
-          false,
-          false,
-          false
-        ) as trigger_sql
+      await db.query(`
+        CALL render_versioning_trigger(
+          p_table_name => 'test_schema.versioning',
+          p_history_table => 'test_schema.versioning_history',
+          p_sys_period => 'sys_period',
+          p_ignore_unchanged_values => false,
+          p_include_current_version_in_history => false,
+          p_mitigate_update_conflicts => false,
+          p_enable_migration_mode => false
+        )
       `)
-
-      await db.query(triggerResult.rows[0].trigger_sql)
 
       // Test operations
       await db.executeTransaction([

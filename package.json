@@ -14,6 +14,7 @@
     "test": "PGHOST=localhost PGPORT=5432 PGUSER=postgres PGPASSWORD=password make run_test",
     "test:e2e:comparison": "node --env-file-if-exists ./.env --loader ts-node/esm/transpile-only --test test/e2e/test-performance-comparison.ts",
     "test:e2e:event": "node --env-file-if-exists ./.env --loader ts-node/esm/transpile-only --test test/e2e/test-event-trigger.ts",
+    "test:e2e:increment": "node --env-file-if-exists ./.env --loader ts-node/esm/transpile-only --test test/e2e/test-increment-version.ts",
     "test:e2e:integration": "node --env-file-if-exists ./.env --loader ts-node/esm/transpile-only --test test/e2e/test-integration.ts",
     "test:e2e:legacy": "node --env-file-if-exists ./.env --loader ts-node/esm/transpile-only --test test/e2e/test-legacy.ts",
     "test:e2e:runner": "node --env-file-if-exists ./.env --loader ts-node/esm/transpile-only test/e2e/run-tests.ts",

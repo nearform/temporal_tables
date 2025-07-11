@@ -11,6 +11,8 @@ CREATE TABLE IF NOT EXISTS versioning_tables_metadata (
   include_current_version_in_history boolean NOT NULL DEFAULT false,
   mitigate_update_conflicts boolean NOT NULL DEFAULT false,
   enable_migration_mode boolean NOT NULL DEFAULT false,
+  increment_version boolean NOT NULL DEFAULT false,
+  version_column_name text NOT NULL DEFAULT 'version',
   PRIMARY KEY (table_name, table_schema)
 );
 
@@ -24,8 +26,10 @@ CREATE TABLE IF NOT EXISTS versioning_tables_metadata (
 --   ignore_unchanged_values,
 --   include_current_version_in_history,
 --   mitigate_update_conflicts,
---   enable_migration_mode
+--   enable_migration_mode,
+--   increment_version,
+--   version_column_name
 -- )
 -- VALUES
---   ('subscriptions', 'public', 'subscriptions_history', 'history', 'sys_period', false, false, false, false),
---   ('users', 'public', 'users_history', 'public', 'system_time', true, true, false, false);
+--   ('subscriptions', 'public', 'subscriptions_history', 'history', 'sys_period', false, false, false, false, false, 'version'),
+--   ('users', 'public', 'users_history', 'public', 'system_time', true, true, false, false, true, 'version');

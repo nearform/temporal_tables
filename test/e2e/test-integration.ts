@@ -87,33 +87,29 @@ describe('Integration Tests - All Features', () => {
       `)
 
       // Set up versioning for both tables
-      const userTriggerResult = await db.query(`
-        SELECT generate_static_versioning_trigger(
-          'users',
-          'users_history',
-          'sys_period',
-          true,  -- ignore unchanged values
-          false,
-          false,
-          false
-        ) as trigger_sql
+      await db.query(`
+        CALL render_versioning_trigger(
+          p_table_name => 'users',
+          p_history_table => 'users_history',
+          p_sys_period => 'sys_period',
+          p_ignore_unchanged_values => true,
+          p_include_current_version_in_history => false,
+          p_mitigate_update_conflicts => false,
+          p_enable_migration_mode => false
+        )
       `)
 
-      await db.query(userTriggerResult.rows[0].trigger_sql)
-
-      const orderTriggerResult = await db.query(`
-        SELECT generate_static_versioning_trigger(
-          'orders',
-          'orders_history',
-          'sys_period',
-          true,  -- ignore unchanged values
-          false,
-          false,
-          false
-        ) as trigger_sql
+      await db.query(`
+        CALL render_versioning_trigger(
+          p_table_name => 'orders',
+          p_history_table => 'orders_history',
+          p_sys_period => 'sys_period',
+          p_ignore_unchanged_values => true,
+          p_include_current_version_in_history => false,
+          p_mitigate_update_conflicts => false,
+          p_enable_migration_mode => false
+        )
       `)
-
-      await db.query(orderTriggerResult.rows[0].trigger_sql)
 
       // Simulate user registration
       await db.executeTransaction([
@@ -198,15 +194,13 @@ describe('Integration Tests - All Features', () => {
       `)
 
       // Initial versioning setup
-      let triggerResult = await db.query(`
-        SELECT generate_static_versioning_trigger(
-          'products',
-          'products_history',
-          'sys_period'
-        ) as trigger_sql
+      await db.query(`
+        CALL render_versioning_trigger(
+          p_table_name => 'products',
+          p_history_table => 'products_history',
+          p_sys_period => 'sys_period'
+        )
       `)
-
-      await db.query(triggerResult.rows[0].trigger_sql)
 
       // Insert initial product data
       await db.executeTransaction([
@@ -223,15 +217,13 @@ describe('Integration Tests - All Features', () => {
       await db.query('ALTER TABLE products_history ADD COLUMN category text')
 
       // Regenerate trigger for new schema
-      triggerResult = await db.query(`
-        SELECT generate_static_versioning_trigger(
-          'products',
-          'products_history',
-          'sys_period'
-        ) as trigger_sql
+      await db.query(`
+        CALL render_versioning_trigger(
+          p_table_name => 'products',
+          p_history_table => 'products_history',
+          p_sys_period => 'sys_period'
+        )
       `)
-
-      await db.query(triggerResult.rows[0].trigger_sql)
 
       // Update with new column
       await db.executeTransaction([
@@ -244,15 +236,13 @@ describe('Integration Tests - All Features', () => {
       await db.query('ALTER TABLE products ALTER COLUMN category DROP DEFAULT')
 
       // Regenerate trigger again
-      triggerResult = await db.query(`
-        SELECT generate_static_versioning_trigger(
-          'products',
-          'products_history',
-          'sys_period'
-        ) as trigger_sql
+      await db.query(`
+        CALL render_versioning_trigger(
+          p_table_name => 'products',
+          p_history_table => 'products_history',
+          p_sys_period => 'sys_period'
+        )
       `)
-
-      await db.query(triggerResult.rows[0].trigger_sql)
 
       // Test with full schema
       await db.executeTransaction([
@@ -309,15 +299,13 @@ describe('Integration Tests - All Features', () => {
         )
       `)
 
-      const triggerResult = await db.query(`
-        SELECT generate_static_versioning_trigger(
-          'performance_test',
-          'performance_test_history',
-          'sys_period'
-        ) as trigger_sql
+      await db.query(`
+        CALL render_versioning_trigger(
+          p_table_name => 'performance_test',
+          p_history_table => 'performance_test_history',
+          p_sys_period => 'sys_period'
+        )
       `)
-
-      await db.query(triggerResult.rows[0].trigger_sql)
 
       const startTime = Date.now()
 
@@ -389,15 +377,13 @@ describe('Integration Tests - All Features', () => {
         )
       `)
 
-      const triggerResult = await db.query(`
-        SELECT generate_static_versioning_trigger(
-          'rapid_test',
-          'rapid_test_history',
-          'sys_period'
-        ) as trigger_sql
+      await db.query(`
+        CALL render_versioning_trigger(
+          p_table_name => 'rapid_test',
+          p_history_table => 'rapid_test_history',
+          p_sys_period => 'sys_period'
+        )
       `)
-
-      await db.query(triggerResult.rows[0].trigger_sql)
 
       // Insert initial record
       await db.executeTransaction([
@@ -483,19 +469,17 @@ describe('Integration Tests - All Features', () => {
       )
 
       // Set up versioning with migration mode
-      const triggerResult = await db.query(`
-        SELECT generate_static_versioning_trigger(
-          'migration_test',
-          'migration_test_history',
-          'sys_period',
-          false,  -- ignore_unchanged_values
-          false,  -- include_current_version_in_history
-          false,  -- mitigate_update_conflicts
-          true    -- enable_migration_mode
-        ) as trigger_sql
+      await db.query(`
+        CALL render_versioning_trigger(
+          p_table_name => 'migration_test',
+          p_history_table => 'migration_test_history',
+          p_sys_period => 'sys_period',
+          p_ignore_unchanged_values => false,
+          p_include_current_version_in_history => false,
+          p_mitigate_update_conflicts => false,
+          p_enable_migration_mode => true
+        )
       `)
-
-      await db.query(triggerResult.rows[0].trigger_sql)
 
       // Update should work correctly with existing history
       await db.executeTransaction([
@@ -567,25 +551,21 @@ describe('Integration Tests - All Features', () => {
       `)
 
       // Set up versioning for both tables
-      const userTriggerResult = await db.query(`
-        SELECT generate_static_versioning_trigger(
-          'users',
-          'users_history',
-          'sys_period'
-        ) as trigger_sql
+      await db.query(`
+        CALL render_versioning_trigger(
+          p_table_name => 'users',
+          p_history_table => 'users_history',
+          p_sys_period => 'sys_period'
+        )
       `)
 
-      await db.query(userTriggerResult.rows[0].trigger_sql)
-
-      const orderTriggerResult = await db.query(`
-        SELECT generate_static_versioning_trigger(
-          'orders',
-          'orders_history',
-          'sys_period'
-        ) as trigger_sql
+      await db.query(`
+        CALL render_versioning_trigger(
+          p_table_name => 'orders',
+          p_history_table => 'orders_history',
+          p_sys_period => 'sys_period'
+        )
       `)
-
-      await db.query(orderTriggerResult.rows[0].trigger_sql)
 
       // Create user and order
       await db.executeTransaction([
@@ -643,15 +623,13 @@ describe('Integration Tests - All Features', () => {
         )
       `)
 
-      const triggerResult = await db.query(`
-        SELECT generate_static_versioning_trigger(
-          'rollback_test',
-          'rollback_test_history',
-          'sys_period'
-        ) as trigger_sql
+      await db.query(`
+        CALL render_versioning_trigger(
+          p_table_name => 'rollback_test',
+          p_history_table => 'rollback_test_history',
+          p_sys_period => 'sys_period'
+        )
       `)
-
-      await db.query(triggerResult.rows[0].trigger_sql)
 
       // Insert initial data
       await db.executeTransaction([
@@ -702,15 +680,13 @@ describe('Integration Tests - All Features', () => {
         )
       `)
 
-      const triggerResult = await db.query(`
-        SELECT generate_static_versioning_trigger(
-          'concurrent_test',
-          'concurrent_test_history',
-          'sys_period'
-        ) as trigger_sql
+      await db.query(`
+        CALL render_versioning_trigger(
+          p_table_name => 'concurrent_test',
+          p_history_table => 'concurrent_test_history',
+          p_sys_period => 'sys_period'
+        )
       `)
-
-      await db.query(triggerResult.rows[0].trigger_sql)
 
       // Insert initial record
       await db.executeTransaction([

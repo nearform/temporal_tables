@@ -158,7 +158,6 @@ export class DatabaseHelper {
 
     // Modern functionality requires Postgres 13+
     const modernSqlFiles = [
-      'generate_static_versioning_trigger.sql',
       'versioning_tables_metadata.sql',
       'render_versioning_trigger.sql',
       'event_trigger_versioning.sql'

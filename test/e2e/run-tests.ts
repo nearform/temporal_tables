@@ -34,7 +34,8 @@ const testFiles: string[] = [
   'test-static-generator.ts',
   'test-legacy.ts',
   'test-event-trigger.ts',
-  'test-integration.ts'
+  'test-integration.ts',
+  'test-increment-version.ts'
 ]
 
 const env: TestEnvironment = {

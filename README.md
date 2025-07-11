@@ -18,7 +18,7 @@ Over time, new features have been introduced while maintaining backward compatib
 - [Automatic trigger re-rendering](#event-trigger-for-automatic-re-rendering)
 - [Versioning tables metadata management](#versioning-tables-metadata)
 - [Update conflict mitigation](#mitigate-update-conflicts)
-- [Autoincrementing version number support](#autoincrementing-version-number)
+- [Auto-incrementing version number support](#autoincrementing-version-number)
 - [Migration mode support](#migration-mode)
 
 <a name="usage"></a>
@@ -490,25 +490,10 @@ The modern static trigger generator creates optimized, table-specific trigger fu
 
 1. **Install the generator:**
    ```sh
-   psql temporal_test < generate_static_versioning_trigger.sql
    psql temporal_test < render_versioning_trigger.sql
    ```
 
 2. **Generate static trigger:**
-   ```sql
-   -- Using the generator function directly
-   SELECT generate_static_versioning_trigger(
-     p_table_name => 'subscriptions',
-     p_history_table => 'subscriptions_history',
-     p_sys_period => 'sys_period',
-     p_ignore_unchanged_values => false,
-     p_include_current_version_in_history => false,
-     p_mitigate_update_conflicts => false,
-     p_enable_migration_mode => false
-   );
-   ```
-
-3. **Using the render procedure (recommended):**
    ```sql
    CALL render_versioning_trigger(
      p_table_name => 'subscriptions',
@@ -534,9 +519,36 @@ CALL render_versioning_trigger(
   p_ignore_unchanged_values => true,
   p_include_current_version_in_history => true,
   p_mitigate_update_conflicts => true,
-  p_enable_migration_mode => true
+  p_enable_migration_mode => true,
+  p_increment_version => true,
+  p_version_column_name => 'version'
 );
 ```
+
+### Auto-incrementing Version Number Support
+
+The static generator fully supports auto-incrementing version numbers:
+
+```sql
+-- First, add version columns to your tables
+ALTER TABLE subscriptions ADD COLUMN version integer NOT NULL DEFAULT 1;
+ALTER TABLE subscriptions_history ADD COLUMN version integer NOT NULL;
+
+-- Generate trigger with version increment support
+CALL render_versioning_trigger(
+  p_table_name => 'subscriptions',
+  p_history_table => 'subscriptions_history',
+  p_sys_period => 'sys_period',
+  p_ignore_unchanged_values => false,
+  p_include_current_version_in_history => false,
+  p_mitigate_update_conflicts => false,
+  p_enable_migration_mode => false,
+  p_increment_version => true,
+  p_version_column_name => 'version'
+);
+```
+
+This provides the same functionality as the legacy versioning function but with better performance through static generation.
 
 ### Benefits of Static Triggers
 
@@ -606,9 +618,9 @@ ALTER TABLE subscriptions_history ADD COLUMN plan text;
 <a name="migrations"></a>
 
 
-### Autoincrement version number
+### Auto-increment version number
 
-There is support for autoincrementing a version number whenever values of a row get updated. This may be useful for a few reasons:
+There is support for auto-incrementing a version number whenever values of a row get updated. This may be useful for a few reasons:
 
 * Easier to see how many updates have been made to a row
 * Adding primary keys to the history table. E.g. if the main table has a primary key 'id', it will allow adding a primary key 'id', 'version' to the history table. A lot of ORMs expect a primary key
