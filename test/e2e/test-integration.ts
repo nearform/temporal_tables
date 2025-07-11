@@ -684,7 +684,8 @@ describe('Integration Tests - All Features', () => {
         CALL render_versioning_trigger(
           p_table_name => 'concurrent_test',
           p_history_table => 'concurrent_test_history',
-          p_sys_period => 'sys_period'
+          p_sys_period => 'sys_period',
+          p_mitigate_update_conflicts => true
         )
       `)
 

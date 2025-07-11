@@ -178,16 +178,82 @@ BEGIN
     version_increment_logic := format(E'\n    NEW.%I := existing_version + 1;', p_version_column_name);
   END IF;
 
+  -- Build the main trigger logic conditionally at generation time
+  DECLARE
+    unchanged_check_logic text := '';
+    conflict_mitigation_logic text := '';
+    transaction_check_logic text := '';
+    migration_check_logic text := '';
+    current_version_update_logic text := '';
+    variable_declarations text := E'  time_stamp_to_use timestamptz;\n';
+    update_delete_logic text := '';
+    insert_update_logic text := '';
+  BEGIN
+    -- Generate unchanged values check logic
+    IF p_ignore_unchanged_values THEN
+      unchanged_check_logic := format(E'  IF TG_OP = ''UPDATE'' THEN\n    IF (%s) IS NOT DISTINCT FROM (%s) THEN\n      RETURN OLD;\n    END IF;\n  END IF;\n\n', new_row_compare, old_row_compare);
+    END IF;
+
+    -- Generate conflict mitigation logic
+    IF p_mitigate_update_conflicts THEN
+      conflict_mitigation_logic := E'      IF range_lower >= time_stamp_to_use THEN\n        time_stamp_to_use := range_lower + interval ''1 microseconds'';\n      END IF;\n';
+    END IF;
+
+    -- Generate transaction check logic (only if include_current_version_in_history is false)
+    IF NOT p_include_current_version_in_history THEN
+      transaction_check_logic := E'      -- Ignore rows already modified in the current transaction\n      IF OLD.xmin::TEXT = (txid_current() % (2^32)::BIGINT)::TEXT THEN\n        IF TG_OP = ''DELETE'' THEN\n          RETURN OLD;\n        END IF;\n        RETURN NEW;\n      END IF;\n';
+    END IF;
+
+    -- Generate migration check logic
+    IF p_enable_migration_mode AND p_include_current_version_in_history THEN
+      migration_check_logic := format(E'    -- Check if record exists in history table for migration mode\n    IF TG_OP = ''UPDATE'' OR TG_OP = ''DELETE'' THEN\n      SELECT EXISTS (\n        SELECT FROM %s WHERE ROW(%s) IS NOT DISTINCT FROM ROW(%s)\n      ) INTO record_exists;\n\n      IF NOT record_exists THEN\n        -- Insert current record into history table with its original range\n        INSERT INTO %s (%s, %I%s) VALUES (%s, tstzrange(range_lower, time_stamp_to_use, ''[)'')%s);\n      END IF;\n    END IF;\n\n', 
+        p_history_table, common_columns, old_row_compare, p_history_table, common_columns, p_sys_period, version_column_insert, old_row_compare, version_old_value);
+    END IF;
+
+    -- Generate current version update logic for include_current_version_in_history mode
+    IF p_include_current_version_in_history THEN
+      current_version_update_logic := format(E'      IF TG_OP = ''UPDATE'' OR TG_OP = ''DELETE'' THEN\n        UPDATE %s SET %I = tstzrange(range_lower, time_stamp_to_use, ''[)'')\n        WHERE (%s) = (%s) AND %I = OLD.%I;\n      END IF;\n      IF TG_OP = ''UPDATE'' OR TG_OP = ''INSERT'' THEN\n        INSERT INTO %s (%s, %I%s) VALUES (%s, tstzrange(time_stamp_to_use, NULL, ''[)'')%s);\n      END IF;\n',
+        p_history_table, p_sys_period, common_columns, common_columns, p_sys_period, p_sys_period,
+        p_history_table, common_columns, p_sys_period, version_column_insert, new_row_compare, version_new_value);
+    END IF;
+
+    -- Add variables only when needed
+    IF p_enable_migration_mode AND p_include_current_version_in_history THEN
+      variable_declarations := variable_declarations || E'  record_exists bool;\n';
+    END IF;
+    
+    IF p_increment_version THEN
+      variable_declarations := variable_declarations || E'  existing_version integer;\n';
+    END IF;
+    
+    -- Only add range variables if we have UPDATE or DELETE operations
+    variable_declarations := variable_declarations || E'  range_lower timestamptz;\n  existing_range tstzrange;';
+
+    -- Build UPDATE/DELETE logic with integrated history handling
+    IF p_include_current_version_in_history THEN
+      update_delete_logic := format(E'  IF TG_OP = ''UPDATE'' OR TG_OP = ''DELETE'' THEN\n    existing_range := OLD.%1$I;\n    IF existing_range IS NULL THEN\n      RAISE ''system period column "%%" must not be null'', %2$L;\n    END IF;\n    IF isempty(existing_range) OR NOT upper_inf(existing_range) THEN\n      RAISE ''system period column "%%" contains invalid value'', %2$L;\n    END IF;\n    range_lower := lower(existing_range);\n    \n%3$s    IF range_lower >= time_stamp_to_use THEN\n      RAISE ''system period value of relation "%%" cannot be set to a valid period because a row that is attempted to modify was also modified by another transaction'', TG_TABLE_NAME USING\n      ERRCODE = ''data_exception'',\n      DETAIL = ''the start time of the system period is the greater than or equal to the time of the current transaction '';\n    END IF;\n  END IF;\n\n  IF TG_OP = ''UPDATE'' OR TG_OP = ''DELETE'' OR TG_OP = ''INSERT'' THEN\n%4$s%5$s%6$s\n  END IF;',
+        p_sys_period, p_sys_period, conflict_mitigation_logic,
+        transaction_check_logic, migration_check_logic, current_version_update_logic);
+    ELSE
+      update_delete_logic := format(E'  IF TG_OP = ''UPDATE'' OR TG_OP = ''DELETE'' THEN\n    existing_range := OLD.%1$I;\n    IF existing_range IS NULL THEN\n      RAISE ''system period column "%%" must not be null'', %2$L;\n    END IF;\n    IF isempty(existing_range) OR NOT upper_inf(existing_range) THEN\n      RAISE ''system period column "%%" contains invalid value'', %2$L;\n    END IF;\n    range_lower := lower(existing_range);\n    \n%3$s    IF range_lower >= time_stamp_to_use THEN\n      RAISE ''system period value of relation "%%" cannot be set to a valid period because a row that is attempted to modify was also modified by another transaction'', TG_TABLE_NAME USING\n      ERRCODE = ''data_exception'',\n      DETAIL = ''the start time of the system period is the greater than or equal to the time of the current transaction '';\n    END IF;\n\n%4$s\n    INSERT INTO %5$s (%6$s, %1$I%7$s) VALUES (%8$s, tstzrange(range_lower, time_stamp_to_use, ''[)'')%9$s);\n  END IF;',
+        p_sys_period, p_sys_period, conflict_mitigation_logic, transaction_check_logic,
+        p_history_table, common_columns, version_column_insert, old_row_compare, version_old_value);
+    END IF;
+
+    -- Build INSERT/UPDATE logic
+    IF p_include_current_version_in_history THEN
+      insert_update_logic := format(E'  IF TG_OP = ''UPDATE'' OR TG_OP = ''INSERT'' THEN\n    NEW.%1$I := tstzrange(time_stamp_to_use, NULL, ''[)'');%2$s\n    RETURN NEW;\n  END IF;\n\n  RETURN OLD;',
+        p_sys_period, version_increment_logic);
+    ELSE
+      insert_update_logic := format(E'  IF TG_OP = ''UPDATE'' OR TG_OP = ''INSERT'' THEN\n    NEW.%1$I := tstzrange(time_stamp_to_use, NULL, ''[)'');%2$s\n    RETURN NEW;\n  END IF;\n\n  RETURN OLD;',
+        p_sys_period, version_increment_logic);
+    END IF;
+
   func_sql := format($outer$
 CREATE OR REPLACE FUNCTION %1$I()
 RETURNS TRIGGER AS $func$
 DECLARE
-  time_stamp_to_use timestamptz;
-  range_lower timestamptz;
-  existing_range tstzrange;
-  newVersion record;
-  oldVersion record;
-  record_exists bool;%11$s
+%2$s
 BEGIN
   -- set custom system time if exists
   BEGIN
@@ -197,108 +263,22 @@ BEGIN
     time_stamp_to_use := CURRENT_TIMESTAMP;
   END;
 
-  IF TG_WHEN != 'BEFORE' OR TG_LEVEL != 'ROW' THEN
-    RAISE TRIGGER_PROTOCOL_VIOLATED USING MESSAGE = 'function must be fired BEFORE ROW';
-  END IF;
+%3$s%4$s
 
-  IF TG_OP != 'INSERT' AND TG_OP != 'UPDATE' AND TG_OP != 'DELETE' THEN
-    RAISE TRIGGER_PROTOCOL_VIOLATED USING MESSAGE = 'function must be fired for INSERT or UPDATE or DELETE';
-  END IF;
+%5$s
 
-  IF %3$L AND TG_OP = 'UPDATE' THEN 
-    IF (%4$s) IS NOT DISTINCT FROM (%5$s) THEN
-      RETURN OLD;
-    END IF;
-  END IF;
-
-%12$s
-
-  IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' OR (%6$L AND TG_OP = 'INSERT') THEN
-    IF NOT %6$L THEN
-      -- Ignore rows already modified in the current transaction
-      IF OLD.xmin::TEXT = (txid_current() %% (2^32)::BIGINT)::TEXT THEN
-        IF TG_OP = 'DELETE' THEN
-          RETURN OLD;
-        END IF;
-        RETURN NEW;
-      END IF;    
-    END IF;
-    
-    IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
-      existing_range := OLD.%2$I;
-      IF existing_range IS NULL THEN
-        RAISE 'system period column %% must not be null', %2$L;
-      END IF;
-      IF isempty(existing_range) 
-      OR NOT upper_inf(existing_range) THEN
-        RAISE 'system period column %% contains invalid value', %2$L;
-      END IF;
-      range_lower := lower(existing_range);
-      
-      IF %9$L THEN
-        -- mitigate update conflicts
-        IF range_lower >= time_stamp_to_use THEN
-          time_stamp_to_use := range_lower + interval '1 microseconds';
-        END IF;
-      END IF;
-      IF range_lower >= time_stamp_to_use THEN
-        RAISE 'system period value of relation "%%" cannot be set to a valid period because a row that is attempted to modify was also modified by another transaction', TG_TABLE_NAME USING
-        ERRCODE = 'data_exception',
-        DETAIL = 'the start time of the system period is the greater than or equal to the time of the current transaction ';
-      END IF;
-    END IF;
-
-    -- Check if record exists in history table for migration mode
-    IF %10$L AND %6$L AND (TG_OP = 'UPDATE' OR TG_OP = 'DELETE') THEN
-      SELECT EXISTS (
-        SELECT FROM %7$s WHERE ROW(%8$s) IS NOT DISTINCT FROM ROW(%5$s)
-      ) INTO record_exists;
-
-      IF NOT record_exists THEN
-        -- Insert current record into history table with its original range
-        INSERT INTO %7$s (%8$s, %2$I%13$s) VALUES (%5$s, tstzrange(range_lower, time_stamp_to_use, '[)')%14$s);
-      END IF;
-    END IF;
-
-    IF %6$L THEN
-      IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
-        UPDATE %7$s SET %2$I = tstzrange(range_lower, time_stamp_to_use, '[)')
-        WHERE (%8$s) = (%8$s) AND %2$I = OLD.%2$I;
-      END IF;
-      IF TG_OP = 'UPDATE' OR TG_OP = 'INSERT' THEN
-        INSERT INTO %7$s (%8$s, %2$I%13$s) VALUES (%4$s, tstzrange(time_stamp_to_use, NULL, '[)')%15$s);
-      END IF;
-    ELSE
-      INSERT INTO %7$s (%8$s, %2$I%13$s) VALUES (%5$s, tstzrange(range_lower, time_stamp_to_use, '[)')%14$s);
-    END IF;
-  END IF;
-
-  IF TG_OP = 'UPDATE' OR TG_OP = 'INSERT' THEN
-    NEW.%2$I := tstzrange(time_stamp_to_use, NULL, '[)');%16$s
-    RETURN NEW;
-  END IF;
-
-  RETURN OLD;
+%6$s
 END;
 $func$ LANGUAGE plpgsql;
 $outer$,
-  trigger_func_name,                    -- %1$s
-  p_sys_period,                         -- %2$s
-  p_ignore_unchanged_values,            -- %3$s
-  new_row_compare,                      -- %4$s
-  old_row_compare,                      -- %5$s
-  p_include_current_version_in_history, -- %6$s
-  p_history_table,                      -- %7$s
-  common_columns,                       -- %8$s
-  p_mitigate_update_conflicts,          -- %9$s
-  p_enable_migration_mode,              -- %10$s
-  version_declare_var,                  -- %11$s
-  version_init_logic,                   -- %12$s
-  version_column_insert,                -- %13$s
-  version_old_value,                    -- %14$s
-  version_new_value,                    -- %15$s
-  version_increment_logic               -- %16$s
+  trigger_func_name,        -- %1$s
+  variable_declarations,    -- %2$s  
+  unchanged_check_logic,    -- %3$s
+  version_init_logic,       -- %4$s
+  update_delete_logic,      -- %5$s
+  insert_update_logic       -- %6$s
 );
+  END;
 
   trigger_sql := format($t$
 DROP TRIGGER IF EXISTS %1$I ON %2$s;
