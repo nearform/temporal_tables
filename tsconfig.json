@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "lib": ["ES2022"],
+    "module": "NodeNext",
+    "moduleResolution": "nodenext",
+    "outDir": "./dist",
+    "sourceMap": true,
+    "strict": true,
+    "target": "ES2022"
+  },
+  "exclude": ["node_modules/**/*"],
+  "include": ["test/**/*.ts", "./package.json"]
+}
