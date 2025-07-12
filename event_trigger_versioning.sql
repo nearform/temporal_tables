@@ -29,15 +29,15 @@ BEGIN
 
     IF FOUND THEN
       CALL render_versioning_trigger(
-        p_table_name => FORMAT('%I.%I', source_schema, source_table),
-        p_history_table => FORMAT('%I.%I', config.history_table_schema, config.history_table),
-        p_sys_period => config.sys_period,
-        p_ignore_unchanged_values => config.ignore_unchanged_values,
-        p_include_current_version_in_history => config.include_current_version_in_history,
-        p_mitigate_update_conflicts => config.mitigate_update_conflicts,
-        p_enable_migration_mode => config.enable_migration_mode,
-        p_increment_version => config.increment_version,
-        p_version_column_name => config.version_column_name
+        table_name => FORMAT('%I.%I', source_schema, source_table),
+        history_table => FORMAT('%I.%I', config.history_table_schema, config.history_table),
+        sys_period => config.sys_period,
+        ignore_unchanged_values => config.ignore_unchanged_values,
+        include_current_version_in_history => config.include_current_version_in_history,
+        mitigate_update_conflicts => config.mitigate_update_conflicts,
+        enable_migration_mode => config.enable_migration_mode,
+        increment_version => config.increment_version,
+        version_column_name => config.version_column_name
       );
     END IF;
   END LOOP;

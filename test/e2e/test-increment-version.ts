@@ -54,15 +54,10 @@ describe('Increment Version E2E Tests', () => {
       // Generate trigger with increment_version = true
       await db.query(`
         CALL render_versioning_trigger(
-          p_table_name => 'increment_version_test',
-          p_history_table => 'increment_version_test_history',
-          p_sys_period => 'sys_period',
-          p_ignore_unchanged_values => false,
-          p_include_current_version_in_history => false,
-          p_mitigate_update_conflicts => false,
-          p_enable_migration_mode => false,
-          p_increment_version => true,
-          p_version_column_name => 'version'
+          table_name => 'increment_version_test',
+          history_table => 'increment_version_test_history',
+          sys_period => 'sys_period',
+          increment_version => true
         )
       `)
 
@@ -171,15 +166,11 @@ describe('Increment Version E2E Tests', () => {
       // Generate trigger with increment_version and include_current_version_in_history
       await db.query(`
         CALL render_versioning_trigger(
-          p_table_name => 'increment_version_with_history_test',
-          p_history_table => 'increment_version_with_history_test_history',
-          p_sys_period => 'sys_period',
-          p_ignore_unchanged_values => false,
-          p_include_current_version_in_history => true,
-          p_mitigate_update_conflicts => false,
-          p_enable_migration_mode => false,
-          p_increment_version => true,
-          p_version_column_name => 'version'
+          table_name => 'increment_version_with_history_test',
+          history_table => 'increment_version_with_history_test_history',
+          sys_period => 'sys_period',
+          include_current_version_in_history => true,
+          increment_version => true
         )
       `)
 
@@ -251,15 +242,11 @@ describe('Increment Version E2E Tests', () => {
       // Generate trigger with custom version column name
       await db.query(`
         CALL render_versioning_trigger(
-          p_table_name => 'increment_version_test',
-          p_history_table => 'increment_version_test_history',
-          p_sys_period => 'sys_period',
-          p_ignore_unchanged_values => false,
-          p_include_current_version_in_history => false,
-          p_mitigate_update_conflicts => false,
-          p_enable_migration_mode => false,
-          p_increment_version => true,
-          p_version_column_name => 'rev_number'
+          table_name => 'increment_version_test',
+          history_table => 'increment_version_test_history',
+          sys_period => 'sys_period',
+          increment_version => true,
+          version_column_name => 'rev_number'
         )
       `)
 
@@ -302,15 +289,10 @@ describe('Increment Version E2E Tests', () => {
       try {
         await db.query(`
           CALL render_versioning_trigger(
-            p_table_name => 'increment_version_test',
-            p_history_table => 'increment_version_test_history',
-            p_sys_period => 'sys_period',
-            p_ignore_unchanged_values => false,
-            p_include_current_version_in_history => false,
-            p_mitigate_update_conflicts => false,
-            p_enable_migration_mode => false,
-            p_increment_version => true,
-            p_version_column_name => 'version'
+            table_name => 'increment_version_test',
+            history_table => 'increment_version_test_history',
+            sys_period => 'sys_period',
+            increment_version => true
           )
         `)
         throw new Error('Should have failed')
@@ -345,15 +327,10 @@ describe('Increment Version E2E Tests', () => {
       // Use render procedure with increment_version
       await db.query(`
         CALL render_versioning_trigger(
-          p_table_name => 'increment_version_test',
-          p_history_table => 'increment_version_test_history',
-          p_sys_period => 'sys_period',
-          p_ignore_unchanged_values => false,
-          p_include_current_version_in_history => false,
-          p_mitigate_update_conflicts => false,
-          p_enable_migration_mode => false,
-          p_increment_version => true,
-          p_version_column_name => 'version'
+          table_name => 'increment_version_test',
+          history_table => 'increment_version_test_history',
+          sys_period => 'sys_period',
+          increment_version => true
         )
       `)
 
@@ -428,15 +405,10 @@ describe('Increment Version E2E Tests', () => {
       // Generate initial trigger
       await db.query(`
         CALL render_versioning_trigger(
-          p_table_name => 'increment_version_test',
-          p_history_table => 'increment_version_test_history',
-          p_sys_period => 'sys_period',
-          p_ignore_unchanged_values => false,
-          p_include_current_version_in_history => false,
-          p_mitigate_update_conflicts => false,
-          p_enable_migration_mode => false,
-          p_increment_version => true,
-          p_version_column_name => 'version'
+          table_name => 'increment_version_test',
+          history_table => 'increment_version_test_history',
+          sys_period => 'sys_period',
+          increment_version => true
         )
       `)
 

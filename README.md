@@ -496,13 +496,9 @@ The modern static trigger generator creates optimized, table-specific trigger fu
 2. **Generate static trigger:**
    ```sql
    CALL render_versioning_trigger(
-     p_table_name => 'subscriptions',
-     p_history_table => 'subscriptions_history',
-     p_sys_period => 'sys_period',
-     p_ignore_unchanged_values => false,
-     p_include_current_version_in_history => false,
-     p_mitigate_update_conflicts => false,
-     p_enable_migration_mode => false
+     table_name => 'subscriptions',
+     history_table => 'subscriptions_history',
+     sys_period => 'sys_period'
    );
    ```
 
@@ -513,15 +509,14 @@ The static generator supports all modern features:
 ```sql
 -- Generate trigger with all advanced features enabled
 CALL render_versioning_trigger(
-  p_table_name => 'subscriptions',
-  p_history_table => 'subscriptions_history',
-  p_sys_period => 'sys_period',
-  p_ignore_unchanged_values => true,
-  p_include_current_version_in_history => true,
-  p_mitigate_update_conflicts => true,
-  p_enable_migration_mode => true,
-  p_increment_version => true,
-  p_version_column_name => 'version'
+  table_name => 'subscriptions',
+  history_table => 'subscriptions_history',
+  sys_period => 'sys_period',
+  ignore_unchanged_values => true,
+  include_current_version_in_history => true,
+  mitigate_update_conflicts => true,
+  enable_migration_mode => true,
+  increment_version => true
 );
 ```
 
@@ -536,15 +531,10 @@ ALTER TABLE subscriptions_history ADD COLUMN version integer NOT NULL;
 
 -- Generate trigger with version increment support
 CALL render_versioning_trigger(
-  p_table_name => 'subscriptions',
-  p_history_table => 'subscriptions_history',
-  p_sys_period => 'sys_period',
-  p_ignore_unchanged_values => false,
-  p_include_current_version_in_history => false,
-  p_mitigate_update_conflicts => false,
-  p_enable_migration_mode => false,
-  p_increment_version => true,
-  p_version_column_name => 'version'
+  table_name => 'subscriptions',
+  history_table => 'subscriptions_history',
+  sys_period => 'sys_period',
+  increment_version => true
 );
 ```
 
@@ -594,11 +584,11 @@ INSERT INTO versioning_tables_metadata (
 
 -- 2. Generate initial trigger
 CALL render_versioning_trigger(
-  p_table_name => 'subscriptions',
-  p_history_table => 'subscriptions_history',
-  p_sys_period => 'sys_period',
-  p_ignore_unchanged_values => true,
-  p_include_current_version_in_history => true
+  table_name => 'subscriptions',
+  history_table => 'subscriptions_history',
+  sys_period => 'sys_period',
+  ignore_unchanged_values => true,
+  include_current_version_in_history => true
 );
 
 -- 3. Modify table schema - trigger is automatically re-rendered

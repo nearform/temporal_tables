@@ -103,13 +103,10 @@ describe('Legacy vs Modern Implementation Performance Comparison', () => {
     // Use render_versioning_trigger procedure with named arguments
     await db.query(`
       CALL render_versioning_trigger(
-        p_table_name => 'modern_perf_test',
-        p_history_table => 'modern_perf_test_history',
-        p_sys_period => 'sys_period',
-        p_ignore_unchanged_values => true,
-        p_include_current_version_in_history => false,
-        p_mitigate_update_conflicts => false,
-        p_enable_migration_mode => false
+        table_name => 'modern_perf_test',
+        history_table => 'modern_perf_test_history',
+        sys_period => 'sys_period',
+        ignore_unchanged_values => true
       )
     `)
   }
@@ -594,13 +591,10 @@ ${createRow('TOTAL', legacyMetrics.totalTime, modernMetrics.totalTime, true)}
     // Use render_versioning_trigger with ignore_unchanged_values enabled
     await db.query(`
       CALL render_versioning_trigger(
-        p_table_name => 'modern_advanced_test',
-        p_history_table => 'modern_advanced_test_history',
-        p_sys_period => 'sys_period',
-        p_ignore_unchanged_values => true,
-        p_include_current_version_in_history => false,
-        p_mitigate_update_conflicts => false,
-        p_enable_migration_mode => false
+        table_name => 'modern_advanced_test',
+        history_table => 'modern_advanced_test_history',
+        sys_period => 'sys_period',
+        ignore_unchanged_values => true
       )
     `)
 

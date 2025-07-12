@@ -89,25 +89,19 @@ describe('Integration Tests - All Features', () => {
       // Set up versioning for both tables
       await db.query(`
         CALL render_versioning_trigger(
-          p_table_name => 'users',
-          p_history_table => 'users_history',
-          p_sys_period => 'sys_period',
-          p_ignore_unchanged_values => true,
-          p_include_current_version_in_history => false,
-          p_mitigate_update_conflicts => false,
-          p_enable_migration_mode => false
+          table_name => 'users',
+          history_table => 'users_history',
+          sys_period => 'sys_period',
+          ignore_unchanged_values => true
         )
       `)
 
       await db.query(`
         CALL render_versioning_trigger(
-          p_table_name => 'orders',
-          p_history_table => 'orders_history',
-          p_sys_period => 'sys_period',
-          p_ignore_unchanged_values => true,
-          p_include_current_version_in_history => false,
-          p_mitigate_update_conflicts => false,
-          p_enable_migration_mode => false
+          table_name => 'orders',
+          history_table => 'orders_history',
+          sys_period => 'sys_period',
+          ignore_unchanged_values => true
         )
       `)
 
@@ -196,9 +190,9 @@ describe('Integration Tests - All Features', () => {
       // Initial versioning setup
       await db.query(`
         CALL render_versioning_trigger(
-          p_table_name => 'products',
-          p_history_table => 'products_history',
-          p_sys_period => 'sys_period'
+          table_name => 'products',
+          history_table => 'products_history',
+          sys_period => 'sys_period'
         )
       `)
 
@@ -219,9 +213,9 @@ describe('Integration Tests - All Features', () => {
       // Regenerate trigger for new schema
       await db.query(`
         CALL render_versioning_trigger(
-          p_table_name => 'products',
-          p_history_table => 'products_history',
-          p_sys_period => 'sys_period'
+          table_name => 'products',
+          history_table => 'products_history',
+          sys_period => 'sys_period'
         )
       `)
 
@@ -238,9 +232,9 @@ describe('Integration Tests - All Features', () => {
       // Regenerate trigger again
       await db.query(`
         CALL render_versioning_trigger(
-          p_table_name => 'products',
-          p_history_table => 'products_history',
-          p_sys_period => 'sys_period'
+          table_name => 'products',
+          history_table => 'products_history',
+          sys_period => 'sys_period'
         )
       `)
 
@@ -301,9 +295,9 @@ describe('Integration Tests - All Features', () => {
 
       await db.query(`
         CALL render_versioning_trigger(
-          p_table_name => 'performance_test',
-          p_history_table => 'performance_test_history',
-          p_sys_period => 'sys_period'
+          table_name => 'performance_test',
+          history_table => 'performance_test_history',
+          sys_period => 'sys_period'
         )
       `)
 
@@ -379,9 +373,9 @@ describe('Integration Tests - All Features', () => {
 
       await db.query(`
         CALL render_versioning_trigger(
-          p_table_name => 'rapid_test',
-          p_history_table => 'rapid_test_history',
-          p_sys_period => 'sys_period'
+          table_name => 'rapid_test',
+          history_table => 'rapid_test_history',
+          sys_period => 'sys_period'
         )
       `)
 
@@ -471,13 +465,10 @@ describe('Integration Tests - All Features', () => {
       // Set up versioning with migration mode
       await db.query(`
         CALL render_versioning_trigger(
-          p_table_name => 'migration_test',
-          p_history_table => 'migration_test_history',
-          p_sys_period => 'sys_period',
-          p_ignore_unchanged_values => false,
-          p_include_current_version_in_history => false,
-          p_mitigate_update_conflicts => false,
-          p_enable_migration_mode => true
+          table_name => 'migration_test',
+          history_table => 'migration_test_history',
+          sys_period => 'sys_period',
+          enable_migration_mode => true
         )
       `)
 
@@ -553,17 +544,17 @@ describe('Integration Tests - All Features', () => {
       // Set up versioning for both tables
       await db.query(`
         CALL render_versioning_trigger(
-          p_table_name => 'users',
-          p_history_table => 'users_history',
-          p_sys_period => 'sys_period'
+          table_name => 'users',
+          history_table => 'users_history',
+          sys_period => 'sys_period'
         )
       `)
 
       await db.query(`
         CALL render_versioning_trigger(
-          p_table_name => 'orders',
-          p_history_table => 'orders_history',
-          p_sys_period => 'sys_period'
+          table_name => 'orders',
+          history_table => 'orders_history',
+          sys_period => 'sys_period'
         )
       `)
 
@@ -625,9 +616,9 @@ describe('Integration Tests - All Features', () => {
 
       await db.query(`
         CALL render_versioning_trigger(
-          p_table_name => 'rollback_test',
-          p_history_table => 'rollback_test_history',
-          p_sys_period => 'sys_period'
+          table_name => 'rollback_test',
+          history_table => 'rollback_test_history',
+          sys_period => 'sys_period'
         )
       `)
 
@@ -682,10 +673,10 @@ describe('Integration Tests - All Features', () => {
 
       await db.query(`
         CALL render_versioning_trigger(
-          p_table_name => 'concurrent_test',
-          p_history_table => 'concurrent_test_history',
-          p_sys_period => 'sys_period',
-          p_mitigate_update_conflicts => true
+          table_name => 'concurrent_test',
+          history_table => 'concurrent_test_history',
+          sys_period => 'sys_period',
+          mitigate_update_conflicts => true
         )
       `)
 

@@ -49,13 +49,9 @@ describe('Static Generator E2E Tests', () => {
       // Use static generator to create trigger
       await db.query(`
         CALL render_versioning_trigger(
-          p_table_name => 'versioning',
-          p_history_table => 'versioning_history',
-          p_sys_period => 'sys_period',
-          p_ignore_unchanged_values => false,
-          p_include_current_version_in_history => false,
-          p_mitigate_update_conflicts => false,
-          p_enable_migration_mode => false
+          table_name => 'versioning',
+          history_table => 'versioning_history',
+          sys_period => 'sys_period'
         )
       `)
 
@@ -218,13 +214,10 @@ describe('Static Generator E2E Tests', () => {
       // Generate trigger with ignore_unchanged_values = true
       await db.query(`
         CALL render_versioning_trigger(
-          p_table_name => 'versioning',
-          p_history_table => 'versioning_history',
-          p_sys_period => 'sys_period',
-          p_ignore_unchanged_values => true,
-          p_include_current_version_in_history => false,
-          p_mitigate_update_conflicts => false,
-          p_enable_migration_mode => false
+          table_name => 'versioning',
+          history_table => 'versioning_history',
+          sys_period => 'sys_period',
+          ignore_unchanged_values => true
         )
       `)
 
@@ -280,13 +273,10 @@ describe('Static Generator E2E Tests', () => {
       // Generate trigger with include_current_version_in_history = true
       await db.query(`
         CALL render_versioning_trigger(
-          p_table_name => 'versioning',
-          p_history_table => 'versioning_history',
-          p_sys_period => 'sys_period',
-          p_ignore_unchanged_values => false,
-          p_include_current_version_in_history => true,
-          p_mitigate_update_conflicts => false,
-          p_enable_migration_mode => false
+          table_name => 'versioning',
+          history_table => 'versioning_history',
+          sys_period => 'sys_period',
+          include_current_version_in_history => true
         )
       `)
 
@@ -366,13 +356,9 @@ describe('Static Generator E2E Tests', () => {
       await rejects(async () => {
         await db.query(`
           CALL render_versioning_trigger(
-            p_table_name => 'invalid_table',
-            p_history_table => 'invalid_table_history',
-            p_sys_period => 'sys_period',
-            p_ignore_unchanged_values => false,
-            p_include_current_version_in_history => false,
-            p_mitigate_update_conflicts => false,
-            p_enable_migration_mode => false
+            table_name => 'invalid_table',
+            history_table => 'invalid_table_history',
+            sys_period => 'sys_period'
           )
         `)
       })
@@ -392,13 +378,9 @@ describe('Static Generator E2E Tests', () => {
       await rejects(async () => {
         await db.query(`
           CALL render_versioning_trigger(
-            p_table_name => 'versioning',
-            p_history_table => 'nonexistent_history',
-            p_sys_period => 'sys_period',
-            p_ignore_unchanged_values => false,
-            p_include_current_version_in_history => false,
-            p_mitigate_update_conflicts => false,
-            p_enable_migration_mode => false
+            table_name => 'versioning',
+            history_table => 'nonexistent_history',
+            sys_period => 'sys_period'
           )
         `)
       })
@@ -438,13 +420,9 @@ describe('Static Generator E2E Tests', () => {
 
       await db.query(`
         CALL render_versioning_trigger(
-          p_table_name => 'structure',
-          p_history_table => 'structure_history',
-          p_sys_period => 'sys_period',
-          p_ignore_unchanged_values => false,
-          p_include_current_version_in_history => false,
-          p_mitigate_update_conflicts => false,
-          p_enable_migration_mode => false
+          table_name => 'structure',
+          history_table => 'structure_history',
+          sys_period => 'sys_period'
         )
       `)
 
@@ -493,13 +471,9 @@ describe('Static Generator E2E Tests', () => {
 
       await db.query(`
         CALL render_versioning_trigger(
-          p_table_name => 'test_schema.versioning',
-          p_history_table => 'test_schema.versioning_history',
-          p_sys_period => 'sys_period',
-          p_ignore_unchanged_values => false,
-          p_include_current_version_in_history => false,
-          p_mitigate_update_conflicts => false,
-          p_enable_migration_mode => false
+          table_name => 'test_schema.versioning',
+          history_table => 'test_schema.versioning_history',
+          sys_period => 'sys_period'
         )
       `)
 
@@ -605,13 +579,9 @@ async function setupBasicVersioningTable(
   // Generate and execute static trigger
   await db.query(`
     CALL render_versioning_trigger(
-      p_table_name => 'versioning',
-      p_history_table => 'versioning_history', 
-      p_sys_period => 'sys_period',
-      p_ignore_unchanged_values => false,
-      p_include_current_version_in_history => false,
-      p_mitigate_update_conflicts => false,
-      p_enable_migration_mode => false
+      table_name => 'versioning',
+      history_table => 'versioning_history', 
+      sys_period => 'sys_period'
     )
   `)
 }

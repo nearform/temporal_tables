@@ -254,7 +254,7 @@ describe('Event Trigger Versioning E2E Tests', () => {
           'users', 
           'users_history', 
           'sys_period',
-          p_enable_migration_mode => true
+          enable_migration_mode => true
         )
       `)
 
