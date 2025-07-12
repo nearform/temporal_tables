@@ -2,6 +2,8 @@
 
 [![ci](https://github.com/nearform/temporal_tables/actions/workflows/ci.yml/badge.svg)](https://github.com/nearform/temporal_tables/actions/workflows/ci.yml)
 
+> **⚠️ IMPORTANT:** PostgreSQL 13.21 or higher is required for modern features. Legacy support for PostgreSQL versions below 13 has been dropped.
+
 This rewrite aims to provide a temporal tables solution in PL/pgSQL, targeting AWS RDS, Google Cloud SQL, and Azure Database for PostgreSQL where custom C extensions aren't permitted.
 
 The script in `versioning_function.sql` serves as a direct substitute.
@@ -12,9 +14,23 @@ Over time, new features have been introduced while maintaining backward compatib
 
 - [Ignore updates with no actual changes](#ignore-unchanged-values)
 - [Include the current version in history](#include-current-version-in-history)
-- [Autoincrementing version number support](#autoincrementing-version-number)
+- [Static trigger code generation](#static-trigger-code-generation)
+- [Automatic trigger re-rendering](#event-trigger-for-automatic-re-rendering)
+- [Versioning tables metadata management](#versioning-tables-metadata)
+- [Update conflict mitigation](#mitigate-update-conflicts)
+- [Auto-incrementing version number support](#autoincrementing-version-number)
+- [Migration mode support](#migration-mode)
 
 <a name="usage"></a>
+
+## PostgreSQL Version Requirements
+
+**Minimum Required Version: PostgreSQL 13.21**
+
+- **All functionality** (including static triggers, metadata management, event triggers): Requires PostgreSQL 13.21 or higher
+- **Legacy PostgreSQL versions** (below 13): No longer supported
+
+For full feature compatibility and performance, we recommend using the latest PostgreSQL version available.
 
 ## Usage
 
@@ -235,6 +251,40 @@ FOR EACH ROW EXECUTE PROCEDURE versioning(
 );
 ```
 
+<a name="mitigate-update-conflicts"></a>
+
+### Mitigate Update Conflicts
+
+By default, when multiple transactions try to update the same row simultaneously, PostgreSQL's versioning system can detect conflicts where the system period start time would be greater than or equal to the current transaction time. This can cause errors in high-concurrency scenarios.
+
+The `mitigate_update_conflicts` parameter (sixth parameter) automatically adjusts timestamps by adding 1 microsecond when conflicts are detected, allowing operations to proceed smoothly:
+
+```sql
+CREATE TRIGGER versioning_trigger
+BEFORE INSERT OR UPDATE OR DELETE ON subscriptions
+FOR EACH ROW EXECUTE PROCEDURE versioning(
+  'sys_period', 'subscriptions_history', true, false, false, true
+);
+```
+
+**Note:** This feature slightly modifies timestamps to resolve conflicts, which may affect temporal queries that rely on exact timing.
+
+<a name="migration-mode"></a>
+
+### Migration Mode
+
+Migration mode (sixth parameter) enables gradual adoption of the `include_current_version_in_history` feature for existing tables without requiring a maintenance window:
+
+```sql
+CREATE TRIGGER versioning_trigger
+BEFORE INSERT OR UPDATE OR DELETE ON subscriptions
+FOR EACH ROW EXECUTE PROCEDURE versioning(
+  'sys_period', 'subscriptions_history', true, false, true, true
+);
+```
+
+When enabled, the trigger automatically populates missing current versions in the history table during UPDATE or DELETE operations.
+
 <a name="migration-to-include-current-version-in-history"></a>
 
 ### Migrating to include_current_version_in_history
@@ -340,13 +390,13 @@ WHERE UPPER(sys_period) IS NULL;
 
 When adopting the `include_current_version_in_history` feature for existing tables, you can use the automatic gradual migration mode to seamlessly populate the history table with current records.
 
-The migration mode is enabled by adding a sixth parameter to the versioning trigger:
+The migration mode is enabled by adding a seventh parameter to the versioning trigger:
 
 ```sql
 CREATE TRIGGER versioning_trigger
 BEFORE INSERT OR UPDATE OR DELETE ON your_table
 FOR EACH ROW EXECUTE PROCEDURE versioning(
-  'sys_period', 'your_table_history', true, false, true, true
+  'sys_period', 'your_table_history', true, false, true, false, true
 );
 ```
 
@@ -386,11 +436,181 @@ When migration mode is enabled:
 
 **Note:** The automatic migration happens gradually, filling in missing history only when existing records are updated or deleted. As a result, records that rarely change will still require manual migration using the [method described above](#migration-to-include-current-version-in-history). However, since the most active records will be automatically migrated, the risk of missing important data is greatly reduced, eliminating the need for a dedicated maintenance window.
 
-<a name="autoincrementing-version-number"></a>
+<a name="versioning-tables-metadata"></a>
 
-### Autoincrementing version number
+## Versioning Tables Metadata
 
-There is support for autoincrementing a version number whenever values of a row get updated. This may be useful for a few reasons:
+The modern functionality includes a metadata table to track all versioned tables and their configuration. This enables automatic trigger re-rendering when table schemas change.
+
+### Setup
+
+1. **Install the metadata table:**
+   ```sh
+   psql temporal_test < versioning_tables_metadata.sql
+   ```
+
+2. **Register versioned tables:**
+   ```sql
+   INSERT INTO versioning_tables_metadata (
+     table_name, 
+     table_schema, 
+     history_table, 
+     history_table_schema,
+     sys_period,
+     ignore_unchanged_values,
+     include_current_version_in_history,
+     mitigate_update_conflicts,
+     enable_migration_mode
+   ) VALUES (
+     'subscriptions', 
+     'public', 
+     'subscriptions_history',
+     'public',
+     'sys_period',
+     false,
+     false,
+     false,
+     false
+   );
+   ```
+
+### Benefits
+
+- **Automatic trigger re-rendering** when table schemas change
+- **Centralized configuration** for all versioned tables
+- **Schema flexibility** with separate schemas for tables and history tables
+
+<a name="static-trigger-code-generation"></a>
+
+## Static Trigger Code Generation (PostgreSQL 13+)
+
+The modern static trigger generator creates optimized, table-specific trigger functions with no runtime schema lookups, providing better performance and reliability.
+
+### Basic Usage
+
+1. **Install the generator:**
+   ```sh
+   psql temporal_test < render_versioning_trigger.sql
+   ```
+
+2. **Generate static trigger:**
+   ```sql
+   CALL render_versioning_trigger(
+     table_name => 'subscriptions',
+     history_table => 'subscriptions_history',
+     sys_period => 'sys_period'
+   );
+   ```
+
+### Advanced Features
+
+The static generator supports all modern features:
+
+```sql
+-- Generate trigger with all advanced features enabled
+CALL render_versioning_trigger(
+  table_name => 'subscriptions',
+  history_table => 'subscriptions_history',
+  sys_period => 'sys_period',
+  ignore_unchanged_values => true,
+  include_current_version_in_history => true,
+  mitigate_update_conflicts => true,
+  enable_migration_mode => true,
+  increment_version => true
+);
+```
+
+### Auto-incrementing Version Number Support
+
+The static generator fully supports auto-incrementing version numbers:
+
+```sql
+-- First, add version columns to your tables
+ALTER TABLE subscriptions ADD COLUMN version integer NOT NULL DEFAULT 1;
+ALTER TABLE subscriptions_history ADD COLUMN version integer NOT NULL;
+
+-- Generate trigger with version increment support
+CALL render_versioning_trigger(
+  table_name => 'subscriptions',
+  history_table => 'subscriptions_history',
+  sys_period => 'sys_period',
+  increment_version => true
+);
+```
+
+This provides the same functionality as the legacy versioning function but with better performance through static generation.
+
+### Benefits of Static Triggers
+
+- **Better Performance**: No runtime schema lookups
+- **Compile-time Validation**: Errors detected when trigger is created
+- **Explicit Dependencies**: Clear relationship between table structure and trigger code
+- **Optimized Code**: Generated specifically for your table's current schema
+
+<a name="event-trigger-for-automatic-re-rendering"></a>
+
+## Event Trigger for Automatic Re-rendering (PostgreSQL 13+)
+
+Event triggers automatically re-render static versioning triggers when table schemas change, ensuring triggers stay synchronized with table structures.
+
+### Setup
+
+1. **Install event trigger:**
+   ```sh
+   psql temporal_test < event_trigger_versioning.sql
+   ```
+
+2. **Ensure metadata is populated:**
+   The event trigger uses the `versioning_tables_metadata` table to determine which tables need trigger re-rendering.
+
+### How It Works
+
+- **Automatic Detection**: Event trigger fires on `ALTER TABLE` commands
+- **Metadata Lookup**: Checks if the altered table is registered in `versioning_tables_metadata`
+- **Trigger Re-rendering**: Automatically calls `render_versioning_trigger` with stored configuration
+- **Schema Synchronization**: Ensures triggers always match current table structure
+
+### Example Workflow
+
+```sql
+-- 1. Register table in metadata
+INSERT INTO versioning_tables_metadata (
+  table_name, table_schema, history_table, history_table_schema,
+  sys_period, ignore_unchanged_values, include_current_version_in_history
+) VALUES (
+  'subscriptions', 'public', 'subscriptions_history', 'public',
+  'sys_period', true, true
+);
+
+-- 2. Generate initial trigger
+CALL render_versioning_trigger(
+  table_name => 'subscriptions',
+  history_table => 'subscriptions_history',
+  sys_period => 'sys_period',
+  ignore_unchanged_values => true,
+  include_current_version_in_history => true
+);
+
+-- 3. Modify table schema - trigger is automatically re-rendered
+ALTER TABLE subscriptions ADD COLUMN plan text;
+ALTER TABLE subscriptions_history ADD COLUMN plan text;
+
+-- The event trigger automatically regenerates the versioning trigger!
+```
+
+### Benefits
+
+- **Zero Maintenance**: Triggers stay synchronized automatically
+- **Schema Evolution**: Safe to modify table structures
+- **Error Prevention**: Eliminates manual trigger update requirements
+- **Development Friendly**: Works seamlessly with migration scripts
+
+<a name="migrations"></a>
+
+
+### Auto-increment version number
+
+There is support for auto-incrementing a version number whenever values of a row get updated. This may be useful for a few reasons:
 
 * Easier to see how many updates have been made to a row
 * Adding primary keys to the history table. E.g. if the main table has a primary key 'id', it will allow adding a primary key 'id', 'version' to the history table. A lot of ORMs expect a primary key
@@ -429,8 +649,6 @@ UPDATE subscriptions SET state='updated' WHERE name='test1'
 then the table will reflect incremented version `name=test1, state=updated, version=2`. And correspondingly the history table will have the old version `name=test1, state=inserted, version=1` (or both versions if `include_current_version_in_history` is turned on).
 
 
-<a name="migrations"></a>
-
 ## Migrations
 
 During the life of an application is may be necessary to change the schema of a table. In order for temporal_tables to continue to work properly the same migrations should be applied to the history table as well.
@@ -454,6 +672,75 @@ If the column doesn't accept null values you'll need to modify it to allow for n
 <a name="test"></a>
 
 ## Test
+
+### End-to-End Tests (Enhanced)
+
+We've enhanced our comprehensive end-to-end tests written in modern TypeScript using Node.js built-in test runner and node-postgres. These tests provide extensive coverage of all temporal table features with improved reliability:
+
+#### Test Coverage
+- **Static Generator Tests**: Full coverage of the static trigger generator functionality
+- **Legacy Function Tests**: Backward compatibility testing with the original versioning function  
+- **Event Trigger Tests**: Automatic trigger re-rendering on schema changes
+- **Integration Tests**: Real-world scenarios including e-commerce workflows, schema evolution, and performance testing
+- **Error Handling**: Edge cases, transaction rollbacks, and concurrent modifications
+- **Version-aware Testing**: Automatically adapts tests based on PostgreSQL version
+
+#### Test Reliability Improvements
+- **Enhanced timestamp handling**: Eliminates flaky tests due to timing issues
+- **Robust database state management**: Proper cleanup and isolation between tests
+- **Version-specific loading**: Only loads SQL files appropriate for the PostgreSQL version
+- **Better error reporting**: Detailed failure messages with timing context
+
+#### Running E2E Tests
+
+1. **Prerequisites**: Ensure you have PostgreSQL running (Docker or local installation)
+
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+
+3. **Start database** (if using Docker):
+   ```bash
+   npm run db:start
+   ```
+
+4. **Run all E2E tests**:
+   ```bash
+   npm run test:e2e
+   ```
+
+5. **Run specific test suites**:
+   ```bash
+   # Static generator tests
+   npm run test:e2e:static
+   
+   # Legacy function tests  
+   npm run test:e2e:legacy
+   
+   # Integration tests
+   npm run test:e2e:integration
+   
+   # Event trigger tests
+   npm run test:e2e:event
+   
+   # Custom test runner (TypeScript)
+   npm run test:e2e:runner
+   ```
+
+#### Features of Enhanced E2E Tests
+- **Type-safe**: Written in TypeScript with proper type definitions
+- **Modern**: Uses Node.js built-in test runner (no external dependencies like Jest)
+- **Comprehensive**: Tests all features including advanced options and edge cases
+- **Isolated**: Each test starts with a clean database state
+- **Real-world scenarios**: Includes practical examples like e-commerce order processing
+- **Performance testing**: Bulk operations and concurrent access patterns
+- **Version-aware**: Automatically skips tests not supported by current PostgreSQL version
+- **Reliable timing**: Enhanced timestamp checking eliminates flaky test failures
+
+See [test/e2e/README.md](test/e2e/README.md) for detailed documentation.
+
+### Traditional Tests
 
 Ensure you have a postgres database available. A database container can be started by running:
 

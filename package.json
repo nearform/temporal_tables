@@ -1,5 +1,6 @@
 {
   "name": "temporal_tables",
+  "type": "module",
   "version": "1.2.0",
   "description": "A postgresql temporal_tables extension in PL/pgSQL",
   "repository": {
@@ -9,8 +10,16 @@
   "scripts": {
     "db:start": "docker compose up -d",
     "db:stop": "docker compose down",
-    "update-version": "node ./scripts/update-version.js",
-    "test": "PGHOST=localhost PGPORT=5432 PGUSER=postgres PGPASSWORD=password make run_test"
+    "format": "prettier --config ./.prettierrc --write \"test/**/*.ts\"",
+    "test": "PGHOST=localhost PGPORT=5432 PGUSER=postgres PGPASSWORD=password make run_test",
+    "test:e2e:comparison": "node --env-file-if-exists ./.env --loader ts-node/esm/transpile-only --test test/e2e/test-performance-comparison.ts",
+    "test:e2e:event": "node --env-file-if-exists ./.env --loader ts-node/esm/transpile-only --test test/e2e/test-event-trigger.ts",
+    "test:e2e:increment": "node --env-file-if-exists ./.env --loader ts-node/esm/transpile-only --test test/e2e/test-increment-version.ts",
+    "test:e2e:integration": "node --env-file-if-exists ./.env --loader ts-node/esm/transpile-only --test test/e2e/test-integration.ts",
+    "test:e2e:legacy": "node --env-file-if-exists ./.env --loader ts-node/esm/transpile-only --test test/e2e/test-legacy.ts",
+    "test:e2e:runner": "node --env-file-if-exists ./.env --loader ts-node/esm/transpile-only test/e2e/run-tests.ts",
+    "test:e2e:static": "node --env-file-if-exists ./.env --loader ts-node/esm/transpile-only --test test/e2e/test-static-generator.ts",
+    "update-version": "node ./scripts/update-version.js"
   },
   "keywords": [],
   "author": "",
@@ -18,5 +27,24 @@
   "bugs": {
     "url": "https://github.com/nearform/temporal_tables/issues"
   },
-  "homepage": "https://github.com/nearform/temporal_tables#readme"
+  "homepage": "https://github.com/nearform/temporal_tables#readme",
+  "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "@eslint/js": "^9.28.0",
+    "@types/node": "^20.19.1",
+    "@types/pg": "^8.15.4",
+    "cross-env": "^7.0.3",
+    "eslint": "^9.29.0",
+    "eslint-config-prettier": "^10.1.5",
+    "eslint-plugin-prettier": "^5.5.0",
+    "globals": "^16.2.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.0",
+    "pg": "^8.16.2",
+    "prettier": "^3.6.0",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.20.3",
+    "typescript": "^5.0.0"
+  }
 }
