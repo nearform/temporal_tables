@@ -52,6 +52,12 @@ BEGIN
     END IF;
   END IF;
 
+  IF increment_version = 'true' THEN
+    IF TG_OP = 'INSERT' THEN
+      existing_version := 0;
+    END IF;
+  END IF;
+
   IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' OR (include_current_version_in_history = 'true' AND TG_OP = 'INSERT') THEN
     IF include_current_version_in_history <> 'true' THEN
       -- Ignore rows already modified in the current transaction
@@ -74,6 +80,10 @@ BEGIN
         IF range_lower >= time_stamp_to_use THEN
           time_stamp_to_use := range_lower + interval '1 microseconds';
         END IF;
+      END IF;
+
+      IF increment_version = 'true' THEN
+        EXECUTE format('SELECT $1.%I', version_column_name) USING OLD INTO existing_version;
       END IF;
     END IF;
 

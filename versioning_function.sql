@@ -152,7 +152,7 @@ BEGIN
     -- If we we are performing an update or delete, we need to check if the current version is valid and optionally mitigate update conflicts
     IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
       EXECUTE format('SELECT $1.%I', sys_period) USING OLD INTO existing_range;
-      
+
       IF existing_range IS NULL THEN
         RAISE 'system period column "%" of relation "%" must not be null', sys_period, TG_TABLE_NAME USING
         ERRCODE = 'null_value_not_allowed';
