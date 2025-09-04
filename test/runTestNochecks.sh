@@ -3,6 +3,7 @@
 export PGDATESTYLE="Postgres, MDY";
 
 createdb temporal_tables_test
+psql temporal_tables_test -q -c "ALTER DATABASE temporal_tables_test SET timezone TO 'UTC';"
 psql temporal_tables_test -q -f versioning_function_nochecks.sql
 psql temporal_tables_test -q -f system_time_function.sql
 
@@ -10,7 +11,10 @@ mkdir -p test/result
 
 FILES_DIFFERENT=false
 
-REMOTE_TESTS="combinations structure versioning"
+REMOTE_TESTS="
+  combinations structure versioning
+  versioning_custom_system_time
+  "
 
 ./test/runRemoteTests.sh "$REMOTE_TESTS"
 REMOTE_TESTS_RESULT=$?
@@ -21,11 +25,11 @@ if [ "$REMOTE_TESTS_RESULT" -eq 1 ]; then
 fi
 
 TESTS="
-  upper_case different_schema unchanged_values
+  upper_case different_schema unchanged_values unchanged_version_values
   non_equality_types non_equality_types_unchanged_values
-  unchanged_version_values versioning_including_current_version_in_history
+  set_system_time versioning_including_current_version_in_history
   versioning_rollback_include_current_version_in_history noop_update
-  migration_mode
+  migration_mode increment_version increment_version_with_include_current_version_in_history
   "
 
 for name in $TESTS; do
